@@ -98,10 +98,26 @@ export const Admin: React.FC = () => {
 
   // Product Handlers
   const handleAddProduct = async () => {
-    if (!newProduct.id) return alert("ID is required");
-    const productsRef = ref(db, `products/${newProduct.id}`);
-    await set(productsRef, newProduct);
-    setNewProduct({ id: '', name: '', price: 0, category: '', images: [], description: '', externalLink: '' });
+    if (!newProduct.name) return alert("Product name is required");
+    
+    try {
+      const productsRef = ref(db, 'products');
+      const newProductRef = newProduct.id ? ref(db, `products/${newProduct.id}`) : push(productsRef);
+      const finalId = newProduct.id || newProductRef.key;
+      
+      const productData = {
+        ...newProduct,
+        id: finalId,
+        price: Number(newProduct.price) || 0
+      };
+
+      await set(newProductRef, productData);
+      setNewProduct({ id: '', name: '', price: 0, category: '', images: [], description: '', externalLink: '' });
+      alert("Product published successfully!");
+    } catch (error) {
+      console.error("Error adding product:", error);
+      alert("Failed to publish product.");
+    }
   };
 
   const handleUpdateProduct = async () => {
@@ -194,7 +210,7 @@ export const Admin: React.FC = () => {
               <h2 className="text-xl font-serif italic mb-6">Add New Product</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <input 
-                  placeholder="ID (e.g., p1)" 
+                  placeholder="ID (Optional, auto-generated if empty)" 
                   className="bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm"
                   value={newProduct.id} onChange={e => setNewProduct({...newProduct, id: e.target.value})}
                 />
@@ -233,7 +249,7 @@ export const Admin: React.FC = () => {
                 onClick={handleAddProduct}
                 className="mt-6 px-8 py-3 bg-zinc-900 text-white rounded-full text-xs font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all flex items-center gap-2"
               >
-                <Plus size={16} /> Add Product
+                <Plus size={16} /> Publish Product
               </button>
             </div>
 
@@ -249,8 +265,15 @@ export const Admin: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100">
-                  {products.map(p => (
-                    <tr key={p.id} className="hover:bg-zinc-50/50 transition-colors">
+                  {products.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-12 text-center text-zinc-400 text-sm italic">
+                        No products found. Publish your first product above.
+                      </td>
+                    </tr>
+                  ) : (
+                    products.map(p => (
+                      <tr key={p.id} className="hover:bg-zinc-50/50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-4">
                           <img src={p.images?.[0] || 'https://picsum.photos/seed/placeholder/100/100'} className="w-10 h-10 rounded-lg object-cover" />
@@ -276,8 +299,9 @@ export const Admin: React.FC = () => {
                         </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
+                  ))
+                )}
+              </tbody>
               </table>
             </div>
           </div>
