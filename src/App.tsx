@@ -11,6 +11,8 @@ import { Products } from './pages/Products';
 import { ProductDetail } from './pages/ProductDetail';
 import { Admin } from './pages/Admin';
 import { AdPlacement } from './components/AdPlacement';
+import { db } from './lib/firebase';
+import { ref, runTransaction } from 'firebase/database';
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -21,6 +23,44 @@ const ScrollToTop = () => {
 };
 
 const AppContent = () => {
+  React.useEffect(() => {
+    // Basic visitor tracking
+    const trackVisit = async () => {
+      let country = 'Unknown';
+      try {
+        // Try to get country from IP
+        const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(3000) });
+        if (res.ok) {
+          const data = await res.json();
+          country = data.country_name || 'Unknown';
+        }
+      } catch (e) {
+        // Silently fail fetch, use fallback
+      }
+
+      try {
+        const visitorsRef = ref(db, 'stats/visitors');
+        await runTransaction(visitorsRef, (current) => {
+          if (current === null) {
+            return { count: 1, locations: { [country]: 1 } };
+          }
+          const newCount = (current.count || 0) + 1;
+          const newLocations = { ...(current.locations || {}) };
+          newLocations[country] = (newLocations[country] || 0) + 1;
+          return { count: newCount, locations: newLocations };
+        });
+      } catch (e) {
+        // Database error
+      }
+    };
+
+    // Only track once per session
+    if (!sessionStorage.getItem('visited')) {
+      trackVisit();
+      sessionStorage.setItem('visited', 'true');
+    }
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col">
       <ScrollToTop />

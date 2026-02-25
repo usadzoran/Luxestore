@@ -16,7 +16,8 @@ export const Admin: React.FC = () => {
   const [password, setPassword] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [ads, setAds] = useState<Ad[]>([]);
-  const [activeTab, setActiveTab] = useState<'products' | 'ads'>('products');
+  const [visitors, setVisitors] = useState<{ count: number; locations: Record<string, number> }>({ count: 0, locations: {} });
+  const [activeTab, setActiveTab] = useState<'products' | 'ads' | 'visitors'>('products');
 
   const SECRET_KEY = (import.meta as any).env.VITE_ADMIN_SECRET_KEY || 'luxe-admin-2026';
 
@@ -63,13 +64,14 @@ export const Admin: React.FC = () => {
 
     const productsRef = ref(db, 'products');
     const adsRef = ref(db, 'ads');
+    const visitorsRef = ref(db, 'stats/visitors');
 
     const unsubscribeProducts = onValue(productsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
         const productList = Object.keys(data).map(key => ({
           ...data[key],
-          firebaseId: key // Keep track of firebase key if needed
+          firebaseId: key
         }));
         setProducts(productList);
       } else {
@@ -90,11 +92,19 @@ export const Admin: React.FC = () => {
       }
     });
 
+    const unsubscribeVisitors = onValue(visitorsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setVisitors(data);
+      }
+    });
+
     return () => {
       unsubscribeProducts();
       unsubscribeAds();
+      unsubscribeVisitors();
     };
-  }, []);
+  }, [isAuthenticated]);
 
   // Product Handlers
   const handleAddProduct = async () => {
@@ -200,6 +210,12 @@ export const Admin: React.FC = () => {
             >
               <Layout size={14} /> Ads
             </button>
+            <button 
+              onClick={() => setActiveTab('visitors')}
+              className={`px-6 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'visitors' ? 'bg-zinc-900 text-white' : 'text-zinc-400 hover:text-zinc-600'}`}
+            >
+              <Layout size={14} /> Visitors
+            </button>
           </div>
         </div>
 
@@ -229,11 +245,15 @@ export const Admin: React.FC = () => {
                   className="bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm"
                   value={newProduct.category} onChange={e => setNewProduct({...newProduct, category: e.target.value})}
                 />
-                <input 
-                  placeholder="Images (comma separated URLs)" 
-                  className="bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm"
-                  value={newProduct.images?.join(',') || ''} onChange={e => setNewProduct({...newProduct, images: e.target.value.split(',').map(s => s.trim()).filter(Boolean)})}
-                />
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 ml-4">Images (one URL per line)</label>
+                  <textarea 
+                    placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg" 
+                    className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm h-32"
+                    value={newProduct.images?.join('\n') || ''} 
+                    onChange={e => setNewProduct({...newProduct, images: e.target.value.split('\n').map(s => s.trim()).filter(Boolean)})}
+                  />
+                </div>
                 <input 
                   placeholder="External Link" 
                   className="bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm"
@@ -305,7 +325,7 @@ export const Admin: React.FC = () => {
               </table>
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'ads' ? (
           <div className="space-y-8">
             {/* Add Ad Form */}
             <div className="bg-white p-8 rounded-3xl shadow-sm border border-zinc-100">
@@ -369,6 +389,37 @@ export const Admin: React.FC = () => {
               ))}
             </div>
           </div>
+        ) : (
+          <div className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white p-8 rounded-3xl shadow-sm border border-zinc-100">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2">Total Visitors</p>
+                <p className="text-4xl font-serif italic">{visitors.count}</p>
+              </div>
+              <div className="bg-white p-8 rounded-3xl shadow-sm border border-zinc-100 md:col-span-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-4">Visitors by Location</p>
+                <div className="space-y-4">
+                  {Object.entries(visitors.locations || {}).sort((a, b) => (b[1] as number) - (a[1] as number)).map(([loc, count]) => (
+                    <div key={loc} className="flex items-center justify-between">
+                      <span className="text-sm text-zinc-600">{loc}</span>
+                      <div className="flex items-center gap-4 flex-1 mx-4">
+                        <div className="h-1.5 bg-zinc-100 rounded-full flex-1 overflow-hidden">
+                          <div 
+                            className="h-full bg-zinc-900 rounded-full" 
+                            style={{ width: `${((count as number) / (visitors.count || 1)) * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-bold text-zinc-900">{count}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {Object.keys(visitors.locations || {}).length === 0 && (
+                    <p className="text-sm text-zinc-400 italic">No location data available yet.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
 
@@ -413,10 +464,11 @@ export const Admin: React.FC = () => {
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 ml-4">Images (comma separated)</label>
-                <input 
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm"
-                  value={editingProduct.images?.join(',') || ''} onChange={e => setEditingProduct({...editingProduct, images: e.target.value.split(',').map(s => s.trim()).filter(Boolean)})}
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 ml-4">Images (one URL per line)</label>
+                <textarea 
+                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm h-32"
+                  value={editingProduct.images?.join('\n') || ''} 
+                  onChange={e => setEditingProduct({...editingProduct, images: e.target.value.split('\n').map(s => s.trim()).filter(Boolean)})}
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
