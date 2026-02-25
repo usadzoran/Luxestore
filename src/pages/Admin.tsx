@@ -17,7 +17,8 @@ export const Admin: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [ads, setAds] = useState<Ad[]>([]);
   const [visitors, setVisitors] = useState<{ count: number; locations: Record<string, number> }>({ count: 0, locations: {} });
-  const [activeTab, setActiveTab] = useState<'products' | 'ads' | 'visitors'>('products');
+  const [globalScripts, setGlobalScripts] = useState('');
+  const [activeTab, setActiveTab] = useState<'products' | 'ads' | 'visitors' | 'settings'>('products');
 
   const SECRET_KEY = (import.meta as any).env.VITE_ADMIN_SECRET_KEY || 'luxe-admin-2026';
 
@@ -99,10 +100,17 @@ export const Admin: React.FC = () => {
       }
     });
 
+    const scriptsRef = ref(db, 'settings/globalScripts');
+    const unsubscribeScripts = onValue(scriptsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) setGlobalScripts(data);
+    });
+
     return () => {
       unsubscribeProducts();
       unsubscribeAds();
       unsubscribeVisitors();
+      unsubscribeScripts();
     };
   }, [isAuthenticated]);
 
@@ -164,6 +172,12 @@ export const Admin: React.FC = () => {
     await remove(adRef);
   };
 
+  const handleSaveScripts = async () => {
+    const scriptsRef = ref(db, 'settings/globalScripts');
+    await set(scriptsRef, globalScripts);
+    alert('Global scripts saved!');
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-50 px-6">
@@ -215,6 +229,12 @@ export const Admin: React.FC = () => {
               className={`px-6 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'visitors' ? 'bg-zinc-900 text-white' : 'text-zinc-400 hover:text-zinc-600'}`}
             >
               <Layout size={14} /> Visitors
+            </button>
+            <button 
+              onClick={() => setActiveTab('settings')}
+              className={`px-6 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'settings' ? 'bg-zinc-900 text-white' : 'text-zinc-400 hover:text-zinc-600'}`}
+            >
+              <Save size={14} /> Settings
             </button>
           </div>
         </div>
@@ -338,7 +358,10 @@ export const Admin: React.FC = () => {
                   <option value="">Select Placement</option>
                   <option value="home_hero_bottom">Home Hero Bottom</option>
                   <option value="products_top">Products Top</option>
+                  <option value="products_mid">Products Mid-List</option>
                   <option value="products_bottom">Products Bottom</option>
+                  <option value="product_detail_top">Product Detail Top</option>
+                  <option value="product_detail_mid">Product Detail Mid (Description)</option>
                   <option value="product_detail_bottom">Product Detail Bottom</option>
                   <option value="footer_top">Footer Top</option>
                 </select>
@@ -389,7 +412,7 @@ export const Admin: React.FC = () => {
               ))}
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'visitors' ? (
           <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white p-8 rounded-3xl shadow-sm border border-zinc-100">
@@ -418,6 +441,24 @@ export const Admin: React.FC = () => {
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            <div className="bg-white p-8 rounded-3xl shadow-sm border border-zinc-100">
+              <h2 className="text-xl font-serif italic mb-2">Global Scripts</h2>
+              <p className="text-xs text-zinc-400 mb-6 uppercase tracking-widest">Add header scripts for Ezoic, AdSense, or Analytics here.</p>
+              <textarea 
+                placeholder="Paste your <script> tags here..." 
+                className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm h-64 font-mono"
+                value={globalScripts} onChange={e => setGlobalScripts(e.target.value)}
+              />
+              <button 
+                onClick={handleSaveScripts}
+                className="mt-6 px-8 py-3 bg-zinc-900 text-white rounded-full text-xs font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all flex items-center gap-2"
+              >
+                <Save size={16} /> Save Global Scripts
+              </button>
             </div>
           </div>
         )}

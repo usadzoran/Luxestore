@@ -12,7 +12,7 @@ import { ProductDetail } from './pages/ProductDetail';
 import { Admin } from './pages/Admin';
 import { AdPlacement } from './components/AdPlacement';
 import { db } from './lib/firebase';
-import { ref, runTransaction } from 'firebase/database';
+import { ref, runTransaction, onValue } from 'firebase/database';
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -23,6 +23,43 @@ const ScrollToTop = () => {
 };
 
 const AppContent = () => {
+  const [globalScripts, setGlobalScripts] = React.useState('');
+
+  React.useEffect(() => {
+    // Fetch global scripts
+    const scriptsRef = ref(db, 'settings/globalScripts');
+    const unsubscribe = onValue(scriptsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) setGlobalScripts(data);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  React.useEffect(() => {
+    if (!globalScripts) return;
+    
+    // Inject global scripts into head
+    const container = document.createElement('div');
+    container.innerHTML = globalScripts;
+    const scripts = container.querySelectorAll('script');
+    
+    const injectedScripts: HTMLScriptElement[] = [];
+    
+    scripts.forEach(oldScript => {
+      const newScript = document.createElement('script');
+      Array.from(oldScript.attributes).forEach((attr: Attr) => {
+        newScript.setAttribute(attr.name, attr.value);
+      });
+      newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+      document.head.appendChild(newScript);
+      injectedScripts.push(newScript);
+    });
+
+    return () => {
+      injectedScripts.forEach(s => s.remove());
+    };
+  }, [globalScripts]);
+
   React.useEffect(() => {
     // Basic visitor tracking
     const trackVisit = async () => {

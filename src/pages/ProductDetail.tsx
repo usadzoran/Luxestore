@@ -78,6 +78,8 @@ export const ProductDetail: React.FC = () => {
 
           {/* Details */}
           <div className="lg:sticky lg:top-32 h-fit">
+            <AdPlacement placement="product_detail_top" />
+            
             <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-400 mb-4 block">
               {product.category}
             </span>
@@ -87,15 +89,17 @@ export const ProductDetail: React.FC = () => {
             <p className="text-2xl font-medium text-zinc-900 mb-8">
               ${product.price}
             </p>
-            <div className="prose prose-zinc mb-12">
+            <div className="prose prose-zinc mb-8">
               <p className="text-zinc-600 leading-relaxed text-lg">
                 {product.description}
               </p>
             </div>
+
+            <AdPlacement placement="product_detail_mid" />
             
             <button 
               onClick={() => window.open(product.externalLink, '_blank')}
-              className="w-full py-5 bg-zinc-900 text-white rounded-full text-sm font-bold uppercase tracking-[0.2em] hover:bg-zinc-800 transition-all flex items-center justify-center gap-3 shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+              className="w-full py-5 bg-zinc-900 text-white rounded-full text-sm font-bold uppercase tracking-[0.2em] hover:bg-zinc-800 transition-all flex items-center justify-center gap-3 shadow-xl hover:scale-[1.02] active:scale-[0.98] mt-8"
             >
               Buy Now
               <ExternalLink size={18} />

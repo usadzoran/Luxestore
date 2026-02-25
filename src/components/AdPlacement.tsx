@@ -15,6 +15,7 @@ interface AdPlacementProps {
 
 export const AdPlacement: React.FC<AdPlacementProps> = ({ placement }) => {
   const [ads, setAds] = useState<Ad[]>([]);
+  const containerRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!placement) return;
@@ -38,10 +39,25 @@ export const AdPlacement: React.FC<AdPlacementProps> = ({ placement }) => {
     return () => unsubscribe();
   }, [placement]);
 
+  useEffect(() => {
+    if (ads.length > 0 && containerRef.current) {
+      // Execute scripts in injected HTML
+      const scripts = containerRef.current.querySelectorAll('script');
+      scripts.forEach(oldScript => {
+        const newScript = document.createElement('script');
+        Array.from(oldScript.attributes).forEach((attr: Attr) => {
+          newScript.setAttribute(attr.name, attr.value);
+        });
+        newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+        oldScript.parentNode?.replaceChild(newScript, oldScript);
+      });
+    }
+  }, [ads]);
+
   if (ads.length === 0) return null;
 
   return (
-    <div className="my-8 w-full overflow-hidden rounded-xl">
+    <div className="my-8 w-full overflow-hidden rounded-xl" ref={containerRef}>
       {ads.map(ad => (
         <div 
           key={ad.id} 
