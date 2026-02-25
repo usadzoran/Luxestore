@@ -20,14 +20,13 @@ export const AdPlacement: React.FC<AdPlacementProps> = ({ placement }) => {
     if (!placement) return;
     
     const adsRef = ref(db, 'ads');
-    const adsQuery = query(adsRef, orderByChild('placement'), equalTo(placement));
     
-    const unsubscribe = onValue(adsQuery, (snapshot) => {
+    const unsubscribe = onValue(adsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
         const adList = Object.keys(data)
           .map(key => ({ ...data[key], id: key }))
-          .filter(ad => ad.active === 1);
+          .filter(ad => ad.placement === placement && ad.active === 1);
         setAds(adList);
       } else {
         setAds([]);
