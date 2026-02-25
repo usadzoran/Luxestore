@@ -12,10 +12,14 @@ interface Ad {
 }
 
 export const Admin: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [ads, setAds] = useState<Ad[]>([]);
   const [activeTab, setActiveTab] = useState<'products' | 'ads'>('products');
-  
+
+  const SECRET_KEY = (import.meta as any).env.VITE_ADMIN_SECRET_KEY || 'luxe-admin-2026';
+
   // Product Form State
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [newProduct, setNewProduct] = useState<Partial<Product>>({
@@ -26,7 +30,37 @@ export const Admin: React.FC = () => {
   const [editingAd, setEditingAd] = useState<Ad | null>(null);
   const [newAd, setNewAd] = useState<Partial<Ad>>({ placement: '', content: '' });
 
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === SECRET_KEY) {
+      setIsAuthenticated(true);
+      sessionStorage.setItem('admin_auth', SECRET_KEY);
+    } else {
+      alert('Invalid secret key');
+    }
+  };
+
   useEffect(() => {
+    // Add no-index meta tag
+    const meta = document.createElement('meta');
+    meta.name = 'robots';
+    meta.content = 'noindex, nofollow';
+    document.head.appendChild(meta);
+
+    // Check if already authenticated in session
+    const auth = sessionStorage.getItem('admin_auth');
+    if (auth === SECRET_KEY) {
+      setIsAuthenticated(true);
+    }
+
+    return () => {
+      document.head.removeChild(meta);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
     const productsRef = ref(db, 'products');
     const adsRef = ref(db, 'ads');
 
@@ -103,6 +137,34 @@ export const Admin: React.FC = () => {
     const adRef = ref(db, `ads/${id}`);
     await remove(adRef);
   };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-50 px-6">
+        <div className="w-full max-w-md bg-white p-12 rounded-3xl shadow-xl border border-zinc-100">
+          <h1 className="text-3xl font-serif italic mb-8 text-center">Secure Access</h1>
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2 block ml-2">Secret Key</label>
+              <input 
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/5 transition-all"
+                placeholder="••••••••"
+              />
+            </div>
+            <button 
+              type="submit"
+              className="w-full py-4 bg-zinc-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all shadow-lg"
+            >
+              Enter Portal
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pt-32 pb-24 min-h-screen bg-zinc-50">

@@ -1,10 +1,30 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { AdPlacement } from '../components/AdPlacement';
+import { Product } from '../types';
+import { db } from '../lib/firebase';
+import { ref, onValue, query, limitToFirst } from 'firebase/database';
+import { ProductCard } from '../components/ProductCard';
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    const productsRef = ref(db, 'products');
+    const featuredQuery = query(productsRef, limitToFirst(4));
+    
+    const unsubscribe = onValue(featuredQuery, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const productList = Object.keys(data).map(key => data[key]);
+        setFeaturedProducts(productList);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   return (
     <div className="flex flex-col">
@@ -43,6 +63,32 @@ export const Home: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-6 w-full">
         <AdPlacement placement="home_hero_bottom" />
+
+        {featuredProducts.length > 0 && (
+          <section className="py-24">
+            <div className="flex items-end justify-between mb-12">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-400 mb-4 block">
+                  Featured
+                </span>
+                <h2 className="text-4xl font-serif italic tracking-tight">
+                  New Arrivals
+                </h2>
+              </div>
+              <button 
+                onClick={() => navigate('/products')}
+                className="text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-zinc-900 transition-colors"
+              >
+                View All
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {featuredProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );
