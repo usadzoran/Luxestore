@@ -12,7 +12,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       <Link to={`/product/${product.id}`}>
         <div className="relative aspect-[3/4] overflow-hidden bg-zinc-100 rounded-2xl mb-4">
           <img 
-            src={product.images[0]} 
+            src={product.images?.[0] || 'https://picsum.photos/seed/placeholder/800/1000'} 
             alt={product.name}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             referrerPolicy="no-referrer"

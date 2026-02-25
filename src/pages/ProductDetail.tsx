@@ -58,7 +58,7 @@ export const ProductDetail: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
           {/* Images */}
           <div className="space-y-6">
-            {product.images.map((img, index) => (
+            {product.images?.map((img, index) => (
               <motion.div 
                 key={index}
                 initial={{ opacity: 0, scale: 0.95 }}

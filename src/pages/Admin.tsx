@@ -216,7 +216,7 @@ export const Admin: React.FC = () => {
                 <input 
                   placeholder="Images (comma separated URLs)" 
                   className="bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm"
-                  value={newProduct.images?.join(',')} onChange={e => setNewProduct({...newProduct, images: e.target.value.split(',')})}
+                  value={newProduct.images?.join(',') || ''} onChange={e => setNewProduct({...newProduct, images: e.target.value.split(',').map(s => s.trim()).filter(Boolean)})}
                 />
                 <input 
                   placeholder="External Link" 
@@ -253,7 +253,7 @@ export const Admin: React.FC = () => {
                     <tr key={p.id} className="hover:bg-zinc-50/50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-4">
-                          <img src={p.images[0]} className="w-10 h-10 rounded-lg object-cover" />
+                          <img src={p.images?.[0] || 'https://picsum.photos/seed/placeholder/100/100'} className="w-10 h-10 rounded-lg object-cover" />
                           <span className="text-sm font-medium">{p.name}</span>
                         </div>
                       </td>
@@ -392,7 +392,7 @@ export const Admin: React.FC = () => {
                 <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 ml-4">Images (comma separated)</label>
                 <input 
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm"
-                  value={editingProduct.images.join(',')} onChange={e => setEditingProduct({...editingProduct, images: e.target.value.split(',')})}
+                  value={editingProduct.images?.join(',') || ''} onChange={e => setEditingProduct({...editingProduct, images: e.target.value.split(',').map(s => s.trim()).filter(Boolean)})}
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
