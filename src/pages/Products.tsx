@@ -4,10 +4,12 @@ import { Product } from '../types';
 import { AdPlacement } from '../components/AdPlacement';
 import { db } from '../lib/firebase';
 import { ref, onValue } from 'firebase/database';
+import { useLanguage } from '../lib/LanguageContext';
 
 export const Products: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const { t, isRTL } = useLanguage();
 
   useEffect(() => {
     const productsRef = ref(db, 'products');
@@ -31,19 +33,19 @@ export const Products: React.FC = () => {
   return (
     <div className="pt-32 pb-24 min-h-screen bg-white">
       <section className="max-w-7xl mx-auto px-6">
-        <div className="mb-16">
+        <div className={`mb-16 ${isRTL ? 'text-right' : ''}`}>
           <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-400 mb-4 block">
-            The Collection
+            {t.products.collection}
           </span>
           <h1 className="text-5xl font-serif italic tracking-tight">
-            Our Products
+            {t.products.title}
           </h1>
         </div>
 
         <AdPlacement placement="products_top" />
 
         {loading ? (
-          <div className="text-center py-12">Loading products...</div>
+          <div className="text-center py-12">{t.products.loading}</div>
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-16">

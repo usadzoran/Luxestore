@@ -6,12 +6,14 @@ import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { AdPlacement } from '../components/AdPlacement';
 import { db } from '../lib/firebase';
 import { ref, onValue } from 'firebase/database';
+import { useLanguage } from '../lib/LanguageContext';
 
 export const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const { t, isRTL } = useLanguage();
 
   useEffect(() => {
     if (!id) return;
@@ -33,13 +35,13 @@ export const ProductDetail: React.FC = () => {
     return () => unsubscribe();
   }, [id]);
 
-  if (loading) return <div className="pt-32 text-center">Loading...</div>;
+  if (loading) return <div className="pt-32 text-center">{t.products.loading}</div>;
 
   if (!product) {
     return (
       <div className="pt-32 text-center">
-        <h2 className="text-2xl font-serif italic">Product not found</h2>
-        <button onClick={() => navigate('/products')} className="mt-4 text-zinc-500 underline">Back to Shop</button>
+        <h2 className="text-2xl font-serif italic">{t.productDetail.notFound}</h2>
+        <button onClick={() => navigate('/products')} className="mt-4 text-zinc-500 underline">{t.productDetail.backToShop}</button>
       </div>
     );
   }
@@ -49,10 +51,10 @@ export const ProductDetail: React.FC = () => {
       <div className="max-w-7xl mx-auto px-6">
         <button 
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-zinc-400 hover:text-zinc-900 transition-colors mb-12 text-sm uppercase tracking-widest font-bold"
+          className={`flex items-center gap-2 text-zinc-400 hover:text-zinc-900 transition-colors mb-12 text-sm uppercase tracking-widest font-bold ${isRTL ? 'flex-row-reverse' : ''}`}
         >
-          <ArrowLeft size={16} />
-          Back
+          <ArrowLeft size={16} className={isRTL ? 'rotate-180' : ''} />
+          {t.productDetail.back}
         </button>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
@@ -77,7 +79,7 @@ export const ProductDetail: React.FC = () => {
           </div>
 
           {/* Details */}
-          <div className="lg:sticky lg:top-32 h-fit">
+          <div className={`lg:sticky lg:top-32 h-fit ${isRTL ? 'text-right' : ''}`}>
             <AdPlacement placement="product_detail_top" />
             
             <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-400 mb-4 block">
@@ -101,31 +103,21 @@ export const ProductDetail: React.FC = () => {
               onClick={() => window.open(product.externalLink, '_blank')}
               className="w-full py-5 bg-zinc-900 text-white rounded-full text-sm font-bold uppercase tracking-[0.2em] hover:bg-zinc-800 transition-all flex items-center justify-center gap-3 shadow-xl hover:scale-[1.02] active:scale-[0.98] mt-8"
             >
-              Buy Now
+              {t.productDetail.buyNow}
               <ExternalLink size={18} />
             </button>
 
             <AdPlacement placement="product_detail_bottom" />
             
             <div className="mt-12 pt-12 border-t border-zinc-100 space-y-6">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-400">
-                  <span className="text-[10px] font-bold">01</span>
+              {t.productDetail.features.map((feature: string, i: number) => (
+                <div key={i} className={`flex items-center gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <div className="w-10 h-10 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-400">
+                    <span className="text-[10px] font-bold">0{i + 1}</span>
+                  </div>
+                  <p className="text-xs uppercase tracking-widest font-bold text-zinc-500">{feature}</p>
                 </div>
-                <p className="text-xs uppercase tracking-widest font-bold text-zinc-500">Premium Quality Materials</p>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-400">
-                  <span className="text-[10px] font-bold">02</span>
-                </div>
-                <p className="text-xs uppercase tracking-widest font-bold text-zinc-500">Ethically Sourced & Crafted</p>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-400">
-                  <span className="text-[10px] font-bold">03</span>
-                </div>
-                <p className="text-xs uppercase tracking-widest font-bold text-zinc-500">Timeless Design Aesthetic</p>
-              </div>
+              ))}
             </div>
           </div>
         </div>

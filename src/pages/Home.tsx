@@ -6,10 +6,12 @@ import { Product } from '../types';
 import { db } from '../lib/firebase';
 import { ref, onValue, query, limitToFirst } from 'firebase/database';
 import { ProductCard } from '../components/ProductCard';
+import { useLanguage } from '../lib/LanguageContext';
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const { t, isRTL } = useLanguage();
 
   useEffect(() => {
     const productsRef = ref(db, 'products');
@@ -46,16 +48,16 @@ export const Home: React.FC = () => {
             transition={{ duration: 1, ease: "easeOut" }}
           >
             <h1 className="text-6xl md:text-8xl font-serif italic text-white mb-8 tracking-tight">
-              LuxeStore
+              {t.home.heroTitle}
             </h1>
             <p className="text-white/80 text-lg md:text-xl max-w-2xl mx-auto mb-12 font-light tracking-wide">
-              Curated elegance for your modern sanctuary. Discover timeless pieces crafted for longevity.
+              {t.home.heroSubtitle}
             </p>
             <button 
               onClick={() => navigate('/products')}
               className="px-12 py-5 bg-white text-zinc-900 rounded-full text-sm font-bold uppercase tracking-[0.2em] hover:bg-zinc-100 transition-all shadow-xl hover:scale-105 active:scale-95"
             >
-              Shop Now
+              {t.home.shopNow}
             </button>
           </motion.div>
         </div>
@@ -66,20 +68,20 @@ export const Home: React.FC = () => {
 
         {featuredProducts.length > 0 && (
           <section className="py-24">
-            <div className="flex items-end justify-between mb-12">
-              <div>
+            <div className={`flex items-end justify-between mb-12 ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div className={isRTL ? 'text-right' : ''}>
                 <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-400 mb-4 block">
-                  Featured
+                  {t.home.featured}
                 </span>
                 <h2 className="text-4xl font-serif italic tracking-tight">
-                  New Arrivals
+                  {t.home.newArrivals}
                 </h2>
               </div>
               <button 
                 onClick={() => navigate('/products')}
                 className="text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-zinc-900 transition-colors"
               >
-                View All
+                {t.home.viewAll}
               </button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">

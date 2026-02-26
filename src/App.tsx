@@ -13,6 +13,8 @@ import { Admin } from './pages/Admin';
 import { AdPlacement } from './components/AdPlacement';
 import { db } from './lib/firebase';
 import { ref, runTransaction, onValue } from 'firebase/database';
+import { LanguageProvider, useLanguage } from './lib/LanguageContext';
+import { Language } from './lib/translations';
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -24,6 +26,7 @@ const ScrollToTop = () => {
 
 const AppContent = () => {
   const [globalScripts, setGlobalScripts] = React.useState('');
+  const { t, isRTL, setLanguage } = useLanguage();
 
   React.useEffect(() => {
     // Fetch global scripts
@@ -64,12 +67,28 @@ const AppContent = () => {
     // Basic visitor tracking
     const trackVisit = async () => {
       let country = 'Unknown';
+      let detectedLang: Language = 'en';
+
       try {
         // Try to get country from IP
         const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(3000) });
         if (res.ok) {
           const data = await res.json();
           country = data.country_name || 'Unknown';
+          const countryCode = data.country_code || '';
+
+          // Map country to language
+          if (['SA', 'AE', 'EG', 'JO', 'KW', 'QA', 'BH', 'OM', 'LB', 'IQ', 'MA', 'DZ', 'TN', 'LY', 'YE', 'SY', 'PS'].includes(countryCode)) {
+            detectedLang = 'ar';
+          } else if (['FR', 'BE', 'CH', 'CA', 'SN', 'CI', 'CM'].includes(countryCode)) {
+            detectedLang = 'fr';
+          } else if (['ES', 'MX', 'AR', 'CO', 'CL', 'PE'].includes(countryCode)) {
+            detectedLang = 'es';
+          }
+          
+          if (!localStorage.getItem('app_lang')) {
+            setLanguage(detectedLang);
+          }
         }
       } catch (e) {
         // Silently fail fetch, use fallback
@@ -122,10 +141,10 @@ const AppContent = () => {
               LuxeStore
             </a>
             <p className="text-zinc-400 text-xs uppercase tracking-widest">
-              © 2026 LuxeStore. All rights reserved.
+              © 2026 LuxeStore. {t.footer.rights}
             </p>
           </div>
-          <div className="flex gap-8 text-[10px] text-zinc-400 uppercase tracking-widest font-bold">
+          <div className={`flex gap-8 text-[10px] text-zinc-400 uppercase tracking-widest font-bold ${isRTL ? 'flex-row-reverse' : ''}`}>
             <a href="#" className="hover:text-zinc-900 transition-colors">Privacy Policy</a>
             <a href="#" className="hover:text-zinc-900 transition-colors">Terms of Service</a>
             <a href="#" className="hover:text-zinc-900 transition-colors">Contact</a>
@@ -138,8 +157,10 @@ const AppContent = () => {
 
 export default function App() {
   return (
-    <Router>
-      <AppContent />
-    </Router>
+    <LanguageProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </LanguageProvider>
   );
 }
