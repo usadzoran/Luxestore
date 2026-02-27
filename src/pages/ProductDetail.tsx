@@ -93,7 +93,7 @@ export const ProductDetail: React.FC = () => {
 
   // Default values for landing page elements if missing
   const headline = product.headline || `Experience the Ultimate ${product.name}`;
-  const subHeadline = product.subHeadline || `Discover why thousands of customers choose our ${product.category.toLowerCase()} for their modern sanctuary.`;
+  const subHeadline = product.subHeadline || `Discover why thousands of customers choose our ${product.category?.toLowerCase() || 'products'} for their modern sanctuary.`;
   const benefits = product.benefits || [
     "Premium quality materials for long-lasting durability",
     "Ergonomic design focused on comfort and style",
@@ -112,6 +112,9 @@ export const ProductDetail: React.FC = () => {
     { question: "Is the assembly difficult?", answer: "Most of our products come pre-assembled or with very simple instructions that take less than 15 minutes." },
     { question: "How do I contact support?", answer: "You can reach our customer support team 24/7 via the contact form or email support@luxestore.com." }
   ];
+
+  const productImages = product.images || [];
+  const mainImage = productImages[0] || 'https://picsum.photos/seed/placeholder/800/1000';
 
   const handleBuyNow = () => {
     window.open(product.externalLink, '_blank');
@@ -227,7 +230,7 @@ export const ProductDetail: React.FC = () => {
                 className="aspect-[4/5] bg-white rounded-[2rem] overflow-hidden shadow-2xl border-8 border-white"
               >
                 <img 
-                  src={product.images[0]} 
+                  src={mainImage} 
                   alt={product.name}
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
@@ -270,7 +273,7 @@ export const ProductDetail: React.FC = () => {
         <section className="py-24 border-b border-zinc-100">
           <div className="bg-zinc-900 rounded-[3rem] overflow-hidden relative aspect-video flex items-center justify-center group cursor-pointer">
             <img 
-              src={product.images[1] || product.images[0]} 
+              src={productImages[1] || mainImage} 
               alt="Video Preview" 
               className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-700"
               referrerPolicy="no-referrer"
@@ -315,12 +318,12 @@ export const ProductDetail: React.FC = () => {
           </div>
           <div className="order-1 lg:order-2 grid grid-cols-2 gap-4">
             <div className="space-y-4">
-              <img src={product.images[1] || product.images[0]} className="rounded-3xl w-full aspect-square object-cover shadow-lg" referrerPolicy="no-referrer" />
-              <img src={product.images[2] || product.images[0]} className="rounded-3xl w-full aspect-[3/4] object-cover shadow-lg" referrerPolicy="no-referrer" />
+              <img src={productImages[1] || mainImage} className="rounded-3xl w-full aspect-square object-cover shadow-lg" referrerPolicy="no-referrer" />
+              <img src={productImages[2] || mainImage} className="rounded-3xl w-full aspect-[3/4] object-cover shadow-lg" referrerPolicy="no-referrer" />
             </div>
             <div className="pt-8 space-y-4">
-              <img src={product.images[3] || product.images[0]} className="rounded-3xl w-full aspect-[3/4] object-cover shadow-lg" referrerPolicy="no-referrer" />
-              <img src={product.images[0]} className="rounded-3xl w-full aspect-square object-cover shadow-lg" referrerPolicy="no-referrer" />
+              <img src={productImages[3] || mainImage} className="rounded-3xl w-full aspect-[3/4] object-cover shadow-lg" referrerPolicy="no-referrer" />
+              <img src={mainImage} className="rounded-3xl w-full aspect-square object-cover shadow-lg" referrerPolicy="no-referrer" />
             </div>
           </div>
         </section>

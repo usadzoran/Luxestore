@@ -71,7 +71,12 @@ const AppContent = () => {
 
       try {
         // Try to get country from IP
-        const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(3000) });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        
+        const res = await fetch('https://ipapi.co/json/', { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
         if (res.ok) {
           const data = await res.json();
           country = data.country_name || 'Unknown';
