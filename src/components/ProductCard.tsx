@@ -7,9 +7,11 @@ interface ProductCardProps {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+  const productPath = product.slug ? `/product/${product.slug}` : `/product/${product.id}`;
+
   return (
     <div className="group">
-      <Link to={`/product/${product.id}`}>
+      <Link to={productPath}>
         <div className="relative aspect-[3/4] overflow-hidden bg-zinc-100 rounded-2xl mb-4">
           <img 
             src={product.images?.[0] || 'https://picsum.photos/seed/placeholder/800/1000'} 
@@ -27,7 +29,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
       </Link>
       <Link 
-        to={`/product/${product.id}`}
+        to={productPath}
         className="mt-4 block w-full py-2 text-center text-xs font-bold uppercase tracking-widest border border-zinc-200 rounded-full hover:bg-zinc-900 hover:text-white transition-all"
       >
         View Product

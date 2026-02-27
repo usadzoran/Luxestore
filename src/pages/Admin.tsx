@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Product } from '../types';
-import { Plus, Trash2, Edit2, Save, X, Layout, Package } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, X, Layout, Package, Sparkles, Globe, MessageSquare, HelpCircle, CheckCircle } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { ref, onValue, set, push, remove, update } from 'firebase/database';
+import { GoogleGenAI } from "@google/genai";
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 interface Ad {
   id: string;
@@ -25,8 +28,71 @@ export const Admin: React.FC = () => {
   // Product Form State
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [newProduct, setNewProduct] = useState<Partial<Product>>({
-    id: '', name: '', price: 0, category: '', images: [], description: '', externalLink: ''
+    id: '', name: '', price: 0, category: '', images: [], description: '', externalLink: '',
+    slug: '', headline: '', subHeadline: '', benefits: [], featuresList: [], reviews: [], faqs: []
   });
+  const [isOptimizing, setIsOptimizing] = useState(false);
+
+  const generateSlug = (name: string) => {
+    return name.toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)+/g, '');
+  };
+
+  const handleOptimizeWithAI = async (product: Partial<Product>) => {
+    if (!product.name || !product.description) {
+      alert('Please provide at least a name and basic description first.');
+      return;
+    }
+
+    setIsOptimizing(true);
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Analyze this product and generate high-converting landing page content in JSON format.
+        Product Name: ${product.name}
+        Basic Description: ${product.description}
+        Category: ${product.category}
+        
+        Return a JSON object with:
+        - slug: SEO friendly URL slug
+        - headline: Strong, benefit-driven headline
+        - subHeadline: Persuasive sub-headline
+        - benefits: Array of 4 key benefits
+        - featuresList: Array of 4 objects with {title, description, icon} (icons: check, shield, truck, star, heart, zap)
+        - faqs: Array of 5 common questions and answers
+        - persuasiveDescription: A longer, sales-focused narrative
+        `,
+        config: {
+          responseMimeType: "application/json"
+        }
+      });
+
+      const data = JSON.parse(response.text || '{}');
+      
+      const updated = {
+        ...product,
+        slug: data.slug || generateSlug(product.name || ''),
+        headline: data.headline,
+        subHeadline: data.subHeadline,
+        benefits: data.benefits,
+        featuresList: data.featuresList,
+        faqs: data.faqs,
+        description: data.persuasiveDescription || product.description
+      };
+
+      if (editingProduct) {
+        setEditingProduct(updated as Product);
+      } else {
+        setNewProduct(updated);
+      }
+    } catch (error) {
+      console.error('AI Optimization failed:', error);
+      alert('AI Optimization failed. Please try again.');
+    } finally {
+      setIsOptimizing(false);
+    }
+  };
 
   // Ad Form State
   const [editingAd, setEditingAd] = useState<Ad | null>(null);
@@ -126,11 +192,15 @@ export const Admin: React.FC = () => {
       const productData = {
         ...newProduct,
         id: finalId,
+        slug: newProduct.slug || generateSlug(newProduct.name || ''),
         price: Number(newProduct.price) || 0
       };
 
       await set(newProductRef, productData);
-      setNewProduct({ id: '', name: '', price: 0, category: '', images: [], description: '', externalLink: '' });
+      setNewProduct({ 
+        id: '', name: '', price: 0, category: '', images: [], description: '', externalLink: '',
+        slug: '', headline: '', subHeadline: '', benefits: [], featuresList: [], reviews: [], faqs: []
+      });
       alert("Product published successfully!");
     } catch (error) {
       console.error("Error adding product:", error);
@@ -140,8 +210,12 @@ export const Admin: React.FC = () => {
 
   const handleUpdateProduct = async () => {
     if (!editingProduct) return;
+    const updatedProduct = {
+      ...editingProduct,
+      slug: editingProduct.slug || generateSlug(editingProduct.name)
+    };
     const productRef = ref(db, `products/${editingProduct.id}`);
-    await update(productRef, editingProduct);
+    await update(productRef, updatedProduct);
     setEditingProduct(null);
   };
 
@@ -284,6 +358,47 @@ export const Admin: React.FC = () => {
                   className="bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm md:col-span-2 lg:col-span-3 h-32"
                   value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})}
                 />
+                
+                {/* Landing Page Fields */}
+                <div className="md:col-span-2 lg:col-span-3 space-y-6 pt-6 border-t border-zinc-100">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-serif italic">Landing Page Optimization</h3>
+                    <button 
+                      onClick={() => handleOptimizeWithAI(newProduct)}
+                      disabled={isOptimizing}
+                      className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-100 transition-all disabled:opacity-50"
+                    >
+                      <Sparkles size={14} /> {isOptimizing ? 'Optimizing...' : 'Optimize with AI'}
+                    </button>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 ml-4">SEO Slug</label>
+                      <input 
+                        placeholder="e.g. luxury-velvet-sofa" 
+                        className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm"
+                        value={newProduct.slug} onChange={e => setNewProduct({...newProduct, slug: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 ml-4">Catchy Headline</label>
+                      <input 
+                        placeholder="e.g. The Ultimate Comfort for Your Home" 
+                        className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm"
+                        value={newProduct.headline} onChange={e => setNewProduct({...newProduct, headline: e.target.value})}
+                      />
+                    </div>
+                    <div className="md:col-span-2 space-y-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 ml-4">Persuasive Sub-headline</label>
+                      <textarea 
+                        placeholder="Explain the main benefit in 1-2 sentences..." 
+                        className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm h-20"
+                        value={newProduct.subHeadline} onChange={e => setNewProduct({...newProduct, subHeadline: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
               <button 
                 onClick={handleAddProduct}
@@ -518,6 +633,47 @@ export const Admin: React.FC = () => {
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm h-32"
                   value={editingProduct.description} onChange={e => setEditingProduct({...editingProduct, description: e.target.value})}
                 />
+              </div>
+              
+              {/* Landing Page Fields */}
+              <div className="md:col-span-2 space-y-6 pt-6 border-t border-zinc-100">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-serif italic">Landing Page Optimization</h3>
+                  <button 
+                    onClick={() => handleOptimizeWithAI(editingProduct)}
+                    disabled={isOptimizing}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-100 transition-all disabled:opacity-50"
+                  >
+                    <Sparkles size={14} /> {isOptimizing ? 'Optimizing...' : 'Optimize with AI'}
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 ml-4">SEO Slug</label>
+                    <input 
+                      placeholder="e.g. luxury-velvet-sofa" 
+                      className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm"
+                      value={editingProduct.slug} onChange={e => setEditingProduct({...editingProduct, slug: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 ml-4">Catchy Headline</label>
+                    <input 
+                      placeholder="e.g. The Ultimate Comfort for Your Home" 
+                      className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm"
+                      value={editingProduct.headline} onChange={e => setEditingProduct({...editingProduct, headline: e.target.value})}
+                    />
+                  </div>
+                  <div className="md:col-span-2 space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 ml-4">Persuasive Sub-headline</label>
+                    <textarea 
+                      placeholder="Explain the main benefit in 1-2 sentences..." 
+                      className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm h-20"
+                      value={editingProduct.subHeadline} onChange={e => setEditingProduct({...editingProduct, subHeadline: e.target.value})}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
             <div className="mt-8 flex justify-end gap-4">
