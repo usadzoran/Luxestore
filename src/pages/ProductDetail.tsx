@@ -15,6 +15,32 @@ export const ProductDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const { t, isRTL } = useLanguage();
 
+  // Urgency/Scarcity state - MUST be at the top level
+  const [stockCount, setStockCount] = useState(12);
+  const [viewers, setViewers] = useState(42);
+  const [timeLeft, setTimeLeft] = useState({ h: 2, m: 45, s: 12 });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev.s > 0) return { ...prev, s: prev.s - 1 };
+        if (prev.m > 0) return { ...prev, m: prev.m - 1, s: 59 };
+        if (prev.h > 0) return { h: prev.h - 1, m: 59, s: 59 };
+        return prev;
+      });
+    }, 1000);
+
+    // Randomly update viewers
+    const viewerTimer = setInterval(() => {
+      setViewers(prev => Math.max(15, Math.min(100, prev + (Math.random() > 0.5 ? 1 : -1))));
+    }, 5000);
+
+    return () => {
+      clearInterval(timer);
+      clearInterval(viewerTimer);
+    };
+  }, []);
+
   useEffect(() => {
     if (!slugOrId) return;
     
@@ -90,32 +116,6 @@ export const ProductDetail: React.FC = () => {
   const handleBuyNow = () => {
     window.open(product.externalLink, '_blank');
   };
-
-  // Urgency/Scarcity state
-  const [stockCount, setStockCount] = useState(12);
-  const [viewers, setViewers] = useState(42);
-  const [timeLeft, setTimeLeft] = useState({ h: 2, m: 45, s: 12 });
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev.s > 0) return { ...prev, s: prev.s - 1 };
-        if (prev.m > 0) return { ...prev, m: prev.m - 1, s: 59 };
-        if (prev.h > 0) return { h: prev.h - 1, m: 59, s: 59 };
-        return prev;
-      });
-    }, 1000);
-
-    // Randomly update viewers
-    const viewerTimer = setInterval(() => {
-      setViewers(prev => Math.max(15, Math.min(100, prev + (Math.random() > 0.5 ? 1 : -1))));
-    }, 5000);
-
-    return () => {
-      clearInterval(timer);
-      clearInterval(viewerTimer);
-    };
-  }, []);
 
   return (
     <div className="pt-20 pb-24 min-h-screen bg-white">
