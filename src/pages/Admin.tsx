@@ -1,21 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Product } from '../types';
-import { Plus, Trash2, Edit2, Save, X, Layout, Package, Sparkles, Globe, MessageSquare, HelpCircle, CheckCircle, LogOut } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, X, Layout, Package, Globe, MessageSquare, HelpCircle, CheckCircle, LogOut } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { ref, onValue, set, push, remove, update } from 'firebase/database';
-import { GoogleGenAI } from "@google/genai";
-
-const getAI = () => {
-  const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY || '';
-  return new GoogleGenAI({ apiKey });
-};
 
 export const Admin: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [activeTab, setActiveTab] = useState<'products' | 'stats'>('products');
-  const [isOptimizing, setIsOptimizing] = useState(false);
 
   // Form State
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -59,64 +52,6 @@ export const Admin: React.FC = () => {
     return name.toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)+/g, '');
-  };
-
-  const handleOptimizeWithAI = async (product: Partial<Product>, isEditing: boolean) => {
-    if (!product.name || !product.description) {
-      alert('Please provide a name and basic description first.');
-      return;
-    }
-
-    setIsOptimizing(true);
-    try {
-      const ai = getAI();
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: `Analyze this product and generate high-converting landing page content in JSON format.
-        Product Name: ${product.name}
-        Basic Description: ${product.description}
-        Category: ${product.category}
-        
-        Return a JSON object with:
-        - slug: SEO friendly URL slug
-        - headline: Strong, benefit-driven headline
-        - subHeadline: Persuasive sub-headline
-        - benefits: Array of 4 key benefits
-        - features: Array of 4 objects with {title, description, icon} (icons: check, shield, truck, star, heart, zap)
-        - faqs: Array of 6 common questions and answers
-        - reviews: Array of 3 realistic customer reviews with {author, rating, comment, date}
-        - persuasiveDescription: A longer, sales-focused narrative (3-4 paragraphs)
-        `,
-        config: {
-          responseMimeType: "application/json"
-        }
-      });
-
-      const data = JSON.parse(response.text || '{}');
-      
-      const updated = {
-        ...product,
-        slug: data.slug || generateSlug(product.name || ''),
-        headline: data.headline,
-        subHeadline: data.subHeadline,
-        benefits: data.benefits,
-        features: data.features,
-        faqs: data.faqs,
-        reviews: data.reviews,
-        persuasiveDescription: data.persuasiveDescription
-      };
-
-      if (isEditing) {
-        setEditingProduct(updated as Product);
-      } else {
-        setNewProduct(updated);
-      }
-    } catch (error) {
-      console.error('AI Optimization failed:', error);
-      alert('AI Optimization failed. Check your API key.');
-    } finally {
-      setIsOptimizing(false);
-    }
   };
 
   const handleSaveProduct = async (product: Partial<Product>, id?: string) => {
@@ -226,13 +161,6 @@ export const Admin: React.FC = () => {
 
                 <div className="pt-4 border-t border-zinc-100 space-y-4">
                   <button 
-                    onClick={() => handleOptimizeWithAI(newProduct, false)}
-                    disabled={isOptimizing}
-                    className="w-full py-3 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    <Sparkles size={14} /> {isOptimizing ? 'Optimizing...' : 'Optimize with AI'}
-                  </button>
-                  <button 
                     onClick={() => handleSaveProduct(newProduct)}
                     className="w-full py-4 bg-zinc-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all"
                   >
@@ -337,14 +265,7 @@ export const Admin: React.FC = () => {
               </div>
             </div>
 
-            <div className="mt-10 flex justify-between items-center pt-8 border-t border-zinc-100">
-              <button 
-                onClick={() => handleOptimizeWithAI(editingProduct, true)}
-                disabled={isOptimizing}
-                className="flex items-center gap-2 px-6 py-3 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-100 transition-all disabled:opacity-50"
-              >
-                <Sparkles size={14} /> {isOptimizing ? 'Optimizing...' : 'Optimize with AI'}
-              </button>
+            <div className="mt-10 flex justify-end items-center pt-8 border-t border-zinc-100">
               <div className="flex gap-4">
                 <button onClick={() => setEditingProduct(null)} className="px-8 py-3 border border-zinc-200 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-zinc-50 transition-all">Cancel</button>
                 <button onClick={() => handleSaveProduct(editingProduct, editingProduct.id)} className="px-8 py-3 bg-zinc-900 text-white rounded-full text-xs font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all flex items-center gap-2"><Save size={16} /> Save Changes</button>
