@@ -7,32 +7,26 @@ interface ProductCardProps {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
-  const productPath = product.slug ? `/product/${product.slug}` : `/product/${product.id}`;
-
   return (
     <div className="group">
-      <Link to={productPath}>
-        <div className="relative aspect-[3/4] overflow-hidden bg-zinc-100 rounded-2xl mb-4">
+      <Link to={`/product/${product.slug}`}>
+        <div className="relative aspect-[4/5] overflow-hidden bg-zinc-100 rounded-2xl mb-4">
           <img 
             src={product.images?.[0] || 'https://picsum.photos/seed/placeholder/800/1000'} 
             alt={product.name}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             referrerPolicy="no-referrer"
           />
-        </div>
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="text-sm font-medium text-zinc-900 mb-1">{product.name}</h3>
-            <p className="text-xs text-zinc-500">{product.category}</p>
+          <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full shadow-sm">
+            <span className="text-xs font-bold text-zinc-900">${product.price}</span>
           </div>
-          <span className="text-sm font-medium text-zinc-900">${product.price}</span>
         </div>
-      </Link>
-      <Link 
-        to={productPath}
-        className="mt-4 block w-full py-2 text-center text-xs font-bold uppercase tracking-widest border border-zinc-200 rounded-full hover:bg-zinc-900 hover:text-white transition-all"
-      >
-        View Product
+        <div className="space-y-1">
+          <h3 className="text-sm font-medium text-zinc-900 group-hover:underline decoration-zinc-300 underline-offset-4">
+            {product.name}
+          </h3>
+          <p className="text-xs text-zinc-400 uppercase tracking-widest">{product.category}</p>
+        </div>
       </Link>
     </div>
   );

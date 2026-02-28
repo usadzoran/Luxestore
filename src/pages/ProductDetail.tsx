@@ -1,233 +1,104 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
+import { db } from '../lib/firebase';
+import { ref, onValue, query, orderByChild, equalTo } from 'firebase/database';
 import { Product } from '../types';
 import { motion } from 'motion/react';
-import { ArrowLeft, ExternalLink, CheckCircle2, Star, ShieldCheck, Truck, MessageCircle, HelpCircle, PlayCircle } from 'lucide-react';
-import { AdPlacement } from '../components/AdPlacement';
-import { db } from '../lib/firebase';
-import { ref, onValue, query, orderByChild, equalTo, get } from 'firebase/database';
-import { useLanguage } from '../lib/LanguageContext';
+import { 
+  ChevronLeft, 
+  ShieldCheck, 
+  Truck, 
+  RotateCcw, 
+  Star, 
+  Play, 
+  Plus, 
+  Minus,
+  CheckCircle2,
+  Lock,
+  Zap,
+  Heart
+} from 'lucide-react';
 
 export const ProductDetail: React.FC = () => {
-  const { id: slugOrId } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const { slug } = useParams<{ slug: string }>();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-  const { t, isRTL } = useLanguage();
-
-  // Urgency/Scarcity state - MUST be at the top level
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [stockCount, setStockCount] = useState(12);
-  const [viewers, setViewers] = useState(42);
-  const [timeLeft, setTimeLeft] = useState({ h: 2, m: 45, s: 12 });
+  const [viewers, setViewers] = useState(45);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev.s > 0) return { ...prev, s: prev.s - 1 };
-        if (prev.m > 0) return { ...prev, m: prev.m - 1, s: 59 };
-        if (prev.h > 0) return { h: prev.h - 1, m: 59, s: 59 };
-        return prev;
-      });
-    }, 1000);
+    if (!slug) return;
 
-    // Randomly update viewers
-    const viewerTimer = setInterval(() => {
-      setViewers(prev => Math.max(15, Math.min(100, prev + (Math.random() > 0.5 ? 1 : -1))));
-    }, 5000);
+    const productsRef = ref(db, 'products');
+    const slugQuery = query(productsRef, orderByChild('slug'), equalTo(slug));
+
+    const unsubscribe = onValue(slugQuery, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const productData = Object.values(data)[0] as Product;
+        setProduct(productData);
+      } else {
+        setProduct(null);
+      }
+      setLoading(false);
+    });
+
+    // Simulate dynamic urgency
+    const stockInterval = setInterval(() => {
+      setStockCount(prev => Math.max(3, prev - (Math.random() > 0.8 ? 1 : 0)));
+    }, 15000);
+
+    const viewerInterval = setInterval(() => {
+      setViewers(prev => Math.max(20, prev + Math.floor(Math.random() * 5) - 2));
+    }, 8000);
 
     return () => {
-      clearInterval(timer);
-      clearInterval(viewerTimer);
+      unsubscribe();
+      clearInterval(stockInterval);
+      clearInterval(viewerInterval);
     };
-  }, []);
+  }, [slug]);
 
-  useEffect(() => {
-    if (!slugOrId) return;
-    
-    const fetchProduct = async () => {
-      setLoading(true);
-      // Try fetching by ID first
-      const productRef = ref(db, `products/${slugOrId}`);
-      const snapshot = await get(productRef);
-      
-      if (snapshot.exists()) {
-        setProduct(snapshot.val());
-        setLoading(false);
-      } else {
-        // Try fetching by slug
-        const productsRef = ref(db, 'products');
-        const slugQuery = query(productsRef, orderByChild('slug'), equalTo(slugOrId));
-        const slugSnapshot = await get(slugQuery);
-        
-        if (slugSnapshot.exists()) {
-          const data = slugSnapshot.val();
-          const productKey = Object.keys(data)[0];
-          setProduct(data[productKey]);
-        } else {
-          setProduct(null);
-        }
-        setLoading(false);
-      }
-    };
-
-    fetchProduct();
-  }, [slugOrId]);
-
-  if (loading) return (
-    <div className="pt-32 flex flex-col items-center justify-center min-h-[60vh]">
-      <div className="w-12 h-12 border-4 border-zinc-200 border-t-zinc-900 rounded-full animate-spin mb-4" />
-      <p className="text-zinc-500 font-medium">{t.products.loading}</p>
-    </div>
-  );
-
-  if (!product) {
+  if (loading) {
     return (
-      <div className="pt-32 text-center px-6">
-        <h2 className="text-3xl font-serif italic mb-4">{t.productDetail.notFound}</h2>
-        <button onClick={() => navigate('/products')} className="px-8 py-3 bg-zinc-900 text-white rounded-full text-sm font-bold uppercase tracking-widest">
-          {t.productDetail.backToShop}
-        </button>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-zinc-200 border-t-zinc-900 rounded-full animate-spin" />
       </div>
     );
   }
 
-  // Default values for landing page elements if missing
-  const headline = product.headline || `Experience the Ultimate ${product.name}`;
-  const subHeadline = product.subHeadline || `Discover why thousands of customers choose our ${product.category?.toLowerCase() || 'products'} for their modern sanctuary.`;
-  const benefits = product.benefits || [
-    "Premium quality materials for long-lasting durability",
-    "Ergonomic design focused on comfort and style",
-    "Ethically sourced and environmentally friendly",
-    "Easy to maintain and clean for daily use"
-  ];
-  const reviews = product.reviews || [
-    { author: "Sarah J.", rating: 5, comment: "Absolutely stunning piece! It transformed my living room completely. The quality is even better than in the photos.", date: "2 days ago" },
-    { author: "Michael R.", rating: 5, comment: "Fast shipping and excellent customer service. The product is solid and feels very premium.", date: "1 week ago" },
-    { author: "Elena W.", rating: 4, comment: "Beautiful design. It fits perfectly with my minimalist decor. Highly recommended.", date: "2 weeks ago" }
-  ];
-  const faqs = product.faqs || [
-    { question: "What is the shipping time?", answer: "We typically process orders within 24-48 hours. Shipping usually takes 7-14 business days depending on your location." },
-    { question: "Do you offer a warranty?", answer: "Yes, we offer a 12-month limited warranty on all our products against manufacturing defects." },
-    { question: "What is your return policy?", answer: "We have a 30-day money-back guarantee. If you're not satisfied, you can return the product for a full refund." },
-    { question: "Is the assembly difficult?", answer: "Most of our products come pre-assembled or with very simple instructions that take less than 15 minutes." },
-    { question: "How do I contact support?", answer: "You can reach our customer support team 24/7 via the contact form or email support@luxestore.com." }
-  ];
+  if (!product) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-6">
+        <h1 className="text-4xl font-serif italic mb-4">Product Not Found</h1>
+        <p className="text-zinc-500 mb-8">The item you're looking for doesn't exist or has been moved.</p>
+        <Link to="/products" className="px-8 py-3 bg-zinc-900 text-white rounded-full text-xs font-bold uppercase tracking-widest">
+          Back to Shop
+        </Link>
+      </div>
+    );
+  }
 
-  const productImages = product.images || [];
-  const mainImage = productImages[0] || 'https://picsum.photos/seed/placeholder/800/1000';
-
-  const handleBuyNow = () => {
-    window.open(product.externalLink, '_blank');
-  };
+  const mainImage = product.images?.[0] || 'https://picsum.photos/seed/placeholder/800/1000';
+  const secondaryImages = product.images?.slice(1) || [];
 
   return (
-    <div className="pt-20 pb-24 min-h-screen bg-white">
+    <div className="bg-white">
       {/* Hero Section */}
-      <section className="relative py-16 md:py-24 bg-zinc-50 overflow-hidden">
-        <div className="max-w-7xl mx-auto px-6">
-          <button 
-            onClick={() => navigate('/products')}
-            className={`flex items-center gap-2 text-zinc-400 hover:text-zinc-900 transition-colors mb-8 text-xs uppercase tracking-widest font-bold ${isRTL ? 'flex-row-reverse' : ''}`}
-          >
-            <ArrowLeft size={14} className={isRTL ? 'rotate-180' : ''} />
-            {t.productDetail.back}
-          </button>
+      <section className="pt-32 pb-20 px-6">
+        <div className="max-w-7xl mx-auto">
+          <Link to="/products" className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-zinc-900 transition-colors mb-12">
+            <ChevronLeft size={14} /> Back to Collection
+          </Link>
 
-          <div className={`grid grid-cols-1 lg:grid-cols-2 gap-12 items-center ${isRTL ? 'rtl' : ''}`}>
-            <div className={isRTL ? 'text-right' : ''}>
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6 }}
-              >
-                <div className="flex flex-wrap items-center gap-4 mb-6">
-                  <span className="inline-block px-4 py-1 bg-zinc-900 text-white text-[10px] font-bold uppercase tracking-[0.2em] rounded-full">
-                    {product.category}
-                  </span>
-                  <div className="flex items-center gap-2 text-red-600 animate-pulse">
-                    <div className="w-2 h-2 bg-red-600 rounded-full" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">
-                      {t.productDetail.onlyLeft.replace('{count}', stockCount.toString())}
-                    </span>
-                  </div>
-                </div>
-
-                <h1 className="text-4xl md:text-6xl font-serif italic mb-6 leading-tight tracking-tight">
-                  {headline}
-                </h1>
-                <p className="text-lg md:text-xl text-zinc-600 mb-10 leading-relaxed font-light">
-                  {subHeadline}
-                </p>
-                
-                <div className="bg-white p-6 rounded-3xl border border-zinc-100 shadow-sm mb-10 flex flex-col md:flex-row items-center justify-between gap-6">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2">{t.productDetail.saleEnds}</p>
-                    <div className="flex gap-4 font-mono text-2xl font-bold text-zinc-900">
-                      <div className="flex flex-col items-center">
-                        <span>{timeLeft.h.toString().padStart(2, '0')}</span>
-                        <span className="text-[8px] uppercase tracking-widest text-zinc-400">Hrs</span>
-                      </div>
-                      <span>:</span>
-                      <div className="flex flex-col items-center">
-                        <span>{timeLeft.m.toString().padStart(2, '0')}</span>
-                        <span className="text-[8px] uppercase tracking-widest text-zinc-400">Min</span>
-                      </div>
-                      <span>:</span>
-                      <div className="flex flex-col items-center">
-                        <span>{timeLeft.s.toString().padStart(2, '0')}</span>
-                        <span className="text-[8px] uppercase tracking-widest text-zinc-400">Sec</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="h-12 w-px bg-zinc-100 hidden md:block" />
-                  <div className="text-center md:text-left">
-                    <p className="text-3xl font-bold text-zinc-900">${product.price}</p>
-                    <p className="text-xs text-zinc-400 line-through">${(product.price * 1.25).toFixed(2)}</p>
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                  <button 
-                    onClick={handleBuyNow}
-                    className="flex-1 py-5 bg-zinc-900 text-white rounded-full text-sm font-bold uppercase tracking-[0.2em] hover:bg-zinc-800 transition-all flex items-center justify-center gap-3 shadow-2xl hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    {t.productDetail.buyNow}
-                    <ExternalLink size={18} />
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-3 text-zinc-500 mb-8">
-                  <div className="flex -space-x-2">
-                    {[1, 2, 3].map(i => (
-                      <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-zinc-200 overflow-hidden">
-                        <img src={`https://i.pravatar.cc/100?u=${i}`} alt="user" referrerPolicy="no-referrer" />
-                      </div>
-                    ))}
-                  </div>
-                  <span className="text-[10px] font-medium uppercase tracking-wider">
-                    {t.productDetail.viewing.replace('{count}', viewers.toString())}
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap gap-6">
-                  <div className="flex items-center gap-2 text-zinc-500">
-                    <ShieldCheck size={18} className="text-emerald-500" />
-                    <span className="text-xs font-medium uppercase tracking-wider">Secure Checkout</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-zinc-500">
-                    <Truck size={18} className="text-emerald-500" />
-                    <span className="text-xs font-medium uppercase tracking-wider">Fast Shipping</span>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-
-            <div className="relative">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+            {/* Image Gallery */}
+            <div className="space-y-6">
               <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.8 }}
-                className="aspect-[4/5] bg-white rounded-[2rem] overflow-hidden shadow-2xl border-8 border-white"
+                className="aspect-[4/5] bg-zinc-50 rounded-[2.5rem] overflow-hidden shadow-2xl border-8 border-white"
               >
                 <img 
                   src={mainImage} 
@@ -236,196 +107,257 @@ export const ProductDetail: React.FC = () => {
                   referrerPolicy="no-referrer"
                 />
               </motion.div>
-              {/* Floating badge */}
-              <div className="absolute -bottom-6 -right-6 md:-right-12 bg-white p-6 rounded-3xl shadow-xl border border-zinc-100 max-w-[200px]">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2">Limited Offer</p>
-                <p className="text-2xl font-serif italic text-zinc-900">Save 20% Today</p>
+              <div className="grid grid-cols-4 gap-4">
+                {secondaryImages.map((img, i) => (
+                  <div key={i} className="aspect-square bg-zinc-50 rounded-2xl overflow-hidden border-2 border-white shadow-md">
+                    <img src={img} alt={`${product.name} ${i + 1}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Product Info */}
+            <div className="lg:sticky lg:top-32">
+              <div className="flex items-center gap-2 mb-6">
+                <div className="flex text-amber-400">
+                  {[...Array(5)].map((_, i) => <Star key={i} size={14} fill="currentColor" />)}
+                </div>
+                <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">4.8/5 (124 Reviews)</span>
+              </div>
+
+              <h1 className="text-5xl md:text-6xl font-serif italic tracking-tight mb-6 leading-tight">
+                {product.headline || product.name}
+              </h1>
+              
+              <p className="text-xl text-zinc-500 font-light mb-8 leading-relaxed">
+                {product.subHeadline || product.description}
+              </p>
+
+              <div className="flex items-baseline gap-4 mb-10">
+                <span className="text-4xl font-serif italic">${product.price}</span>
+                <span className="text-zinc-400 line-through text-lg font-light">${Math.round(product.price * 1.4)}</span>
+                <span className="bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">Save 40%</span>
+              </div>
+
+              {/* Urgency Elements */}
+              <div className="bg-zinc-50 rounded-3xl p-6 mb-10 space-y-4 border border-zinc-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                    <span className="text-xs font-bold text-red-600 uppercase tracking-widest">Low Stock</span>
+                  </div>
+                  <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Only {stockCount} items left</span>
+                </div>
+                <div className="h-1.5 bg-zinc-200 rounded-full overflow-hidden">
+                  <motion.div 
+                    initial={{ width: '100%' }}
+                    animate={{ width: `${(stockCount / 15) * 100}%` }}
+                    className="h-full bg-red-500"
+                  />
+                </div>
+                <p className="text-[10px] text-zinc-400 uppercase tracking-widest text-center">
+                  🔥 {viewers} people are viewing this product right now
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <a 
+                  href={product.buyNowUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full py-5 bg-zinc-900 text-white text-center rounded-full text-sm font-bold uppercase tracking-[0.2em] hover:bg-zinc-800 transition-all shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  Buy Now — Secure Checkout
+                </a>
+                <div className="flex items-center justify-center gap-6 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                  <span className="flex items-center gap-1"><ShieldCheck size={14} /> 30-Day Guarantee</span>
+                  <span className="flex items-center gap-1"><Truck size={14} /> Free Shipping</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <div className="max-w-7xl mx-auto px-6">
-        <AdPlacement placement="product_detail_top" />
-
-        {/* Benefits Section */}
-        <section className="py-24 border-b border-zinc-100">
+      {/* Persuasive Description */}
+      <section className="py-24 bg-zinc-50">
+        <div className="max-w-4xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-serif italic mb-4">{t.productDetail.whyLove}</h2>
-            <div className="w-24 h-1 bg-zinc-900 mx-auto rounded-full" />
+            <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-400 mb-4 block">The Story</span>
+            <h2 className="text-4xl font-serif italic mb-8">Why This Matters</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {benefits.map((benefit, i) => (
-              <div key={i} className="bg-zinc-50 p-8 rounded-3xl hover:bg-white hover:shadow-xl transition-all border border-transparent hover:border-zinc-100">
-                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mb-6 shadow-sm">
-                  <CheckCircle2 className="text-emerald-500" size={24} />
+          <div className="prose prose-zinc prose-lg max-w-none text-zinc-600 font-light leading-relaxed space-y-8">
+            {product.persuasiveDescription ? (
+              product.persuasiveDescription.split('\n\n').map((para, i) => (
+                <p key={i}>{para}</p>
+              ))
+            ) : (
+              <p>{product.description}</p>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Features & Benefits */}
+      <section className="py-24 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {(product.features || [
+              { title: "Premium Quality", description: "Crafted from the finest materials for a luxurious feel and lasting durability.", icon: "CheckCircle2" },
+              { title: "Timeless Design", description: "A minimalist aesthetic that complements any modern sanctuary perfectly.", icon: "Heart" },
+              { title: "Ethically Sourced", description: "We believe in responsible luxury. Every piece is ethically sourced.", icon: "ShieldCheck" }
+            ]).map((feature, i) => (
+              <div key={i} className="bg-white p-10 rounded-[2.5rem] border border-zinc-100 shadow-sm hover:shadow-xl transition-all group">
+                <div className="w-12 h-12 bg-zinc-50 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-zinc-900 group-hover:text-white transition-colors">
+                  <Zap size={24} />
                 </div>
-                <p className="text-zinc-900 font-medium leading-relaxed">
-                  {benefit}
-                </p>
+                <h3 className="text-xl font-serif italic mb-4">{feature.title}</h3>
+                <p className="text-zinc-500 font-light leading-relaxed">{feature.description}</p>
               </div>
             ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Video Placeholder Section */}
-        <section className="py-24 border-b border-zinc-100">
-          <div className="bg-zinc-900 rounded-[3rem] overflow-hidden relative aspect-video flex items-center justify-center group cursor-pointer">
+      {/* Video Section */}
+      <section className="py-24 px-6 bg-zinc-900">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-500 mb-4 block">Showcase</span>
+            <h2 className="text-4xl font-serif italic text-white">Experience the Quality</h2>
+          </div>
+          <div className="aspect-video bg-zinc-800 rounded-[3rem] overflow-hidden relative group cursor-pointer border-8 border-zinc-800 shadow-2xl">
             <img 
-              src={productImages[1] || mainImage} 
-              alt="Video Preview" 
-              className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-700"
+              src={secondaryImages[0] || mainImage} 
+              className="w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-700" 
+              alt="Video Preview"
               referrerPolicy="no-referrer"
             />
-            <div className="relative z-10 text-center">
-              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-6 mx-auto shadow-2xl group-hover:scale-110 transition-transform">
-                <PlayCircle size={40} className="text-zinc-900 ml-1" />
-              </div>
-              <h3 className="text-white text-2xl font-serif italic">{t.productDetail.watchShowcase}</h3>
-            </div>
-          </div>
-        </section>
-
-        <AdPlacement placement="product_detail_mid" />
-
-        {/* Storytelling Section */}
-        <section className="py-24 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center border-b border-zinc-100">
-          <div className={`order-2 lg:order-1 ${isRTL ? 'text-right' : ''}`}>
-            <h2 className="text-3xl md:text-5xl font-serif italic mb-8">{t.productDetail.crafted}</h2>
-            <div className="prose prose-zinc max-w-none">
-              <p className="text-zinc-600 text-lg leading-relaxed mb-6">
-                {product.description}
-              </p>
-              <p className="text-zinc-600 text-lg leading-relaxed">
-                Every detail of the {product.name} has been meticulously thought out to provide you with an unparalleled experience. From the selection of raw materials to the final finishing touches, we ensure that each piece meets our rigorous standards of excellence.
-              </p>
-            </div>
-            <div className="mt-10 grid grid-cols-2 gap-6">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
-                  <CheckCircle2 size={16} />
-                </div>
-                <span className="text-sm font-bold uppercase tracking-wider text-zinc-500">{t.productDetail.handmade}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
-                  <CheckCircle2 size={16} />
-                </div>
-                <span className="text-sm font-bold uppercase tracking-wider text-zinc-500">{t.productDetail.ecoFriendly}</span>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+                <Play size={32} fill="currentColor" className="ml-1" />
               </div>
             </div>
           </div>
-          <div className="order-1 lg:order-2 grid grid-cols-2 gap-4">
+        </div>
+      </section>
+
+      {/* Trust Section */}
+      <section className="py-24 bg-zinc-50 border-y border-zinc-100">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
             <div className="space-y-4">
-              <img src={productImages[1] || mainImage} className="rounded-3xl w-full aspect-square object-cover shadow-lg" referrerPolicy="no-referrer" />
-              <img src={productImages[2] || mainImage} className="rounded-3xl w-full aspect-[3/4] object-cover shadow-lg" referrerPolicy="no-referrer" />
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm">
+                <RotateCcw size={24} className="text-zinc-400" />
+              </div>
+              <h3 className="text-lg font-serif italic">30-Day Returns</h3>
+              <p className="text-sm text-zinc-500 font-light">Not in love? Return it within 30 days for a full, no-questions-asked refund.</p>
             </div>
-            <div className="pt-8 space-y-4">
-              <img src={productImages[3] || mainImage} className="rounded-3xl w-full aspect-[3/4] object-cover shadow-lg" referrerPolicy="no-referrer" />
-              <img src={mainImage} className="rounded-3xl w-full aspect-square object-cover shadow-lg" referrerPolicy="no-referrer" />
+            <div className="space-y-4">
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm">
+                <Lock size={24} className="text-zinc-400" />
+              </div>
+              <h3 className="text-lg font-serif italic">Secure Payment</h3>
+              <p className="text-sm text-zinc-500 font-light">Your security is our priority. We use industry-leading encryption for all transactions.</p>
+            </div>
+            <div className="space-y-4">
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm">
+                <Truck size={24} className="text-zinc-400" />
+              </div>
+              <h3 className="text-lg font-serif italic">Global Shipping</h3>
+              <p className="text-sm text-zinc-500 font-light">We ship to over 150 countries worldwide with real-time tracking on every order.</p>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Reviews Section */}
-        <section className="py-24 border-b border-zinc-100">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-8">
-            <div className={isRTL ? 'text-right' : ''}>
-              <h2 className="text-3xl md:text-5xl font-serif italic mb-4">{t.productDetail.customerStories}</h2>
-              <p className="text-zinc-500 uppercase tracking-widest text-xs font-bold">{t.productDetail.reviewsSub}</p>
-            </div>
-            <div className="flex items-center gap-4 bg-zinc-50 px-6 py-4 rounded-2xl">
-              <div className="text-right">
-                <p className="text-2xl font-bold text-zinc-900">4.9</p>
-                <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold">{t.productDetail.avgRating}</p>
-              </div>
+      {/* Reviews Section */}
+      <section className="py-24 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-400 mb-4 block">Social Proof</span>
+            <h2 className="text-4xl font-serif italic mb-4">What Our Customers Say</h2>
+            <div className="flex items-center justify-center gap-2">
               <div className="flex text-amber-400">
-                {[...Array(5)].map((_, i) => <Star key={i} size={20} fill="currentColor" />)}
+                {[...Array(5)].map((_, i) => <Star key={i} size={16} fill="currentColor" />)}
               </div>
+              <span className="text-sm font-bold text-zinc-900">4.8 Average Rating</span>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {reviews.map((review, i) => (
-              <div key={i} className="bg-white p-8 rounded-3xl border border-zinc-100 shadow-sm hover:shadow-md transition-shadow">
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {(product.reviews || [
+              { author: "James L.", rating: 5, comment: "I was skeptical at first, but the quality is undeniable. It's the centerpiece of my room now.", date: "2 days ago" },
+              { author: "Sophia M.", rating: 5, comment: "Fast shipping and beautiful packaging. You can tell they care about the details.", date: "1 week ago" },
+              { author: "David K.", rating: 4, comment: "Excellent product. Minor delay in shipping but the customer support was very helpful.", date: "2 weeks ago" }
+            ]).map((review, i) => (
+              <div key={i} className="bg-zinc-50 p-8 rounded-3xl border border-zinc-100">
                 <div className="flex text-amber-400 mb-4">
-                  {[...Array(review.rating)].map((_, i) => <Star key={i} size={14} fill="currentColor" />)}
+                  {[...Array(review.rating)].map((_, i) => <Star key={i} size={12} fill="currentColor" />)}
                 </div>
-                <p className="text-zinc-700 italic mb-6 leading-relaxed">"{review.comment}"</p>
+                <p className="text-zinc-600 font-light italic mb-6 leading-relaxed">"{review.comment}"</p>
                 <div className="flex items-center justify-between">
-                  <p className="font-bold text-sm text-zinc-900">{review.author}</p>
-                  <p className="text-xs text-zinc-400">{review.date}</p>
+                  <span className="text-xs font-bold uppercase tracking-widest text-zinc-900">{review.author}</span>
+                  <span className="text-[10px] text-zinc-400 uppercase tracking-widest">{review.date}</span>
                 </div>
               </div>
             ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* FAQ Section */}
-        <section className="py-24 border-b border-zinc-100">
-          <div className="max-w-3xl mx-auto">
-            <div className="text-center mb-16">
-              <HelpCircle className="mx-auto mb-4 text-zinc-400" size={40} />
-              <h2 className="text-3xl md:text-5xl font-serif italic mb-4">{t.productDetail.faqTitle}</h2>
-              <p className="text-zinc-500">{t.productDetail.faqSub} {product.name}</p>
-            </div>
-            <div className="space-y-4">
-              {faqs.map((faq, i) => (
-                <details key={i} className="group bg-zinc-50 rounded-2xl overflow-hidden">
-                  <summary className="flex items-center justify-between p-6 cursor-pointer list-none font-bold text-zinc-900 hover:bg-zinc-100 transition-colors">
-                    {faq.question}
-                    <span className="group-open:rotate-180 transition-transform">↓</span>
-                  </summary>
-                  <div className="p-6 pt-0 text-zinc-600 leading-relaxed border-t border-zinc-100">
+      {/* FAQ Section */}
+      <section className="py-24 bg-zinc-50">
+        <div className="max-w-3xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-400 mb-4 block">Knowledge Base</span>
+            <h2 className="text-4xl font-serif italic">Common Questions</h2>
+          </div>
+          <div className="space-y-4">
+            {(product.faqs || [
+              { question: "How long does shipping take?", answer: "We typically deliver within 7-14 business days depending on your location. You'll receive a tracking number as soon as your order ships." },
+              { question: "Is there a warranty?", answer: "Yes, we provide a 1-year limited warranty on all our products covering manufacturing defects." },
+              { question: "What is your return policy?", answer: "We offer a 30-day money-back guarantee. If you're not satisfied, simply contact us for a return authorization." }
+            ]).map((faq, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
+                <button 
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  className="w-full px-8 py-6 flex items-center justify-between text-left hover:bg-zinc-50 transition-colors"
+                >
+                  <span className="text-sm font-bold uppercase tracking-widest text-zinc-900">{faq.question}</span>
+                  {openFaq === i ? <Minus size={16} /> : <Plus size={16} />}
+                </button>
+                {openFaq === i && (
+                  <div className="px-8 pb-6 text-zinc-500 font-light text-sm leading-relaxed">
                     {faq.answer}
                   </div>
-                </details>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Final CTA Section */}
-        <section className="py-24">
-          <div className="bg-zinc-900 rounded-[3rem] p-12 md:p-24 text-center relative overflow-hidden">
-            {/* Decorative circles */}
-            <div className="absolute top-0 left-0 w-64 h-64 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl" />
-            <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/5 rounded-full translate-x-1/2 translate-y-1/2 blur-3xl" />
-            
-            <div className="relative z-10">
-              <h2 className="text-4xl md:text-6xl font-serif italic text-white mb-8">{t.productDetail.readyTitle}</h2>
-              <p className="text-white/60 text-lg md:text-xl max-w-2xl mx-auto mb-12 font-light">
-                {t.productDetail.readySub}
-              </p>
-              <div className="flex flex-col items-center gap-6">
-                <button 
-                  onClick={handleBuyNow}
-                  className="px-16 py-6 bg-white text-zinc-900 rounded-full text-sm font-bold uppercase tracking-[0.2em] hover:bg-zinc-100 transition-all shadow-2xl hover:scale-105 active:scale-95 flex items-center gap-3"
-                >
-                  {t.productDetail.getNow}
-                  <ExternalLink size={18} />
-                </button>
-                <div className="flex flex-wrap justify-center gap-8 mt-4">
-                  <div className="flex items-center gap-2 text-white/40">
-                    <ShieldCheck size={16} />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">{t.productDetail.guarantee}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-white/40">
-                    <Truck size={16} />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">{t.productDetail.shipping}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-white/40">
-                    <MessageCircle size={16} />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">{t.productDetail.support}</span>
-                  </div>
-                </div>
+                )}
               </div>
-            </div>
+            ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        <AdPlacement placement="product_detail_bottom" />
-      </div>
+      {/* Final CTA Section */}
+      <section className="py-32 px-6 text-center">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-5xl md:text-6xl font-serif italic mb-8 leading-tight">Ready to Upgrade Your Sanctuary?</h2>
+          <p className="text-xl text-zinc-500 font-light mb-12">Join over 10,000 happy customers who have already transformed their space with LuxeStore.</p>
+          <a 
+            href={product.buyNowUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block px-16 py-6 bg-zinc-900 text-white rounded-full text-sm font-bold uppercase tracking-[0.2em] hover:bg-zinc-800 transition-all shadow-2xl hover:scale-105 active:scale-95"
+          >
+            Buy Now — Limited Stock
+          </a>
+          <div className="mt-8 flex items-center justify-center gap-4">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" className="h-4 opacity-30" alt="Visa" />
+            <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" className="h-6 opacity-30" alt="Mastercard" />
+            <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" className="h-4 opacity-30" alt="PayPal" />
+          </div>
+        </div>
+      </section>
     </div>
   );
 };

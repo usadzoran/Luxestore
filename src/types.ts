@@ -1,17 +1,26 @@
 export interface Product {
   id: string;
-  slug?: string;
   name: string;
-  headline?: string;
-  subHeadline?: string;
+  slug: string;
   price: number;
   category: string;
   images: string[];
-  description: string;
+  description: string; // Basic short description
+  persuasiveDescription?: string; // AI generated long narrative
+  headline?: string;
+  subHeadline?: string;
   benefits?: string[];
-  featuresList?: { title: string; description: string; icon: string }[];
+  features?: { title: string; description: string; icon: string }[];
   reviews?: { author: string; rating: number; comment: string; date: string }[];
   faqs?: { question: string; answer: string }[];
   videoUrl?: string;
-  externalLink: string;
+  buyNowUrl: string; // External link
+  createdAt: number;
+}
+
+export interface Ad {
+  id: string;
+  placement: string;
+  content: string;
+  active: number;
 }

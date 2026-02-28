@@ -1,29 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import { ProductCard } from '../components/ProductCard';
-import { Product } from '../types';
-import { AdPlacement } from '../components/AdPlacement';
 import { db } from '../lib/firebase';
 import { ref, onValue } from 'firebase/database';
-import { useLanguage } from '../lib/LanguageContext';
+import { Product } from '../types';
+import { ProductCard } from '../components/ProductCard';
+import { motion } from 'motion/react';
 
 export const Products: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const { t, isRTL } = useLanguage();
 
   useEffect(() => {
     const productsRef = ref(db, 'products');
     const unsubscribe = onValue(productsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const productList = Object.keys(data).map(key => data[key]);
-        setProducts(productList);
+        const list = Object.keys(data).map(key => ({
+          ...data[key],
+          id: key
+        }));
+        setProducts(list);
       } else {
         setProducts([]);
       }
-      setLoading(false);
-    }, (error) => {
-      console.error(error);
       setLoading(false);
     });
 
@@ -32,40 +30,39 @@ export const Products: React.FC = () => {
 
   return (
     <div className="pt-32 pb-24 min-h-screen bg-white">
-      <section className="max-w-7xl mx-auto px-6">
-        <div className={`mb-16 ${isRTL ? 'text-right' : ''}`}>
+      <div className="max-w-7xl mx-auto px-6">
+        <header className="mb-16">
           <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-400 mb-4 block">
-            {t.products.collection}
+            The Collection
           </span>
-          <h1 className="text-5xl font-serif italic tracking-tight">
-            {t.products.title}
+          <h1 className="text-6xl font-serif italic tracking-tight">
+            Our Products
           </h1>
-        </div>
-
-        <AdPlacement placement="products_top" />
+        </header>
 
         {loading ? (
-          <div className="text-center py-12">{t.products.loading}</div>
+          <div className="flex items-center justify-center py-32">
+            <div className="w-8 h-8 border-2 border-zinc-200 border-t-zinc-900 rounded-full animate-spin" />
+          </div>
+        ) : products.length === 0 ? (
+          <div className="text-center py-32">
+            <p className="text-zinc-400 italic">No products available yet.</p>
+          </div>
         ) : (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-16">
-              {products.slice(0, 4).map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-            
-            <AdPlacement placement="products_mid" />
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-16 mt-16">
-              {products.slice(4).map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          </>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-16">
+            {products.map((product, index) => (
+              <motion.div
+                key={product.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <ProductCard product={product} />
+              </motion.div>
+            ))}
+          </div>
         )}
-
-        <AdPlacement placement="products_bottom" />
-      </section>
+      </div>
     </div>
   );
 };
