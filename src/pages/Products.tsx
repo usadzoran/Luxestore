@@ -3,7 +3,6 @@ import { db } from '../lib/firebase';
 import { ref, onValue } from 'firebase/database';
 import { Product } from '../types';
 import { ProductCard } from '../components/ProductCard';
-import { motion } from 'motion/react';
 
 export const Products: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -51,14 +50,9 @@ export const Products: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-16">
             {products.map((product, index) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
+              <div key={product.id}>
                 <ProductCard product={product} />
-              </motion.div>
+              </div>
             ))}
           </div>
         )}

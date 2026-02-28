@@ -5,7 +5,10 @@ import { db } from '../lib/firebase';
 import { ref, onValue, set, push, remove, update } from 'firebase/database';
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+const getAI = () => {
+  const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY || '';
+  return new GoogleGenAI({ apiKey });
+};
 
 export const Admin: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -66,6 +69,7 @@ export const Admin: React.FC = () => {
 
     setIsOptimizing(true);
     try {
+      const ai = getAI();
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: `Analyze this product and generate high-converting landing page content in JSON format.

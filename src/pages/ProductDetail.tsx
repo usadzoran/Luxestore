@@ -3,7 +3,6 @@ import { useParams, Link } from 'react-router-dom';
 import { db } from '../lib/firebase';
 import { ref, onValue, query, orderByChild, equalTo } from 'firebase/database';
 import { Product } from '../types';
-import { motion } from 'motion/react';
 import { 
   ChevronLeft, 
   ShieldCheck, 
@@ -95,18 +94,14 @@ export const ProductDetail: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
             {/* Image Gallery */}
             <div className="space-y-6">
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="aspect-[4/5] bg-zinc-50 rounded-[2.5rem] overflow-hidden shadow-2xl border-8 border-white"
-              >
+              <div className="aspect-[4/5] bg-zinc-50 rounded-[2.5rem] overflow-hidden shadow-2xl border-8 border-white">
                 <img 
                   src={mainImage} 
                   alt={product.name}
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
                 />
-              </motion.div>
+              </div>
               <div className="grid grid-cols-4 gap-4">
                 {secondaryImages.map((img, i) => (
                   <div key={i} className="aspect-square bg-zinc-50 rounded-2xl overflow-hidden border-2 border-white shadow-md">
@@ -149,9 +144,8 @@ export const ProductDetail: React.FC = () => {
                   <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Only {stockCount} items left</span>
                 </div>
                 <div className="h-1.5 bg-zinc-200 rounded-full overflow-hidden">
-                  <motion.div 
-                    initial={{ width: '100%' }}
-                    animate={{ width: `${(stockCount / 15) * 100}%` }}
+                  <div 
+                    style={{ width: `${(stockCount / 15) * 100}%` }}
                     className="h-full bg-red-500"
                   />
                 </div>
