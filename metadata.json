@@ -1,7 +1,7 @@
 {
-  "name": "Wassali",
-  "description": "Delivery services in Oran and its suburbs. Fast, reliable, and modern.",
+  "name": "Sign Bridge",
+  "description": "Bridging the gap between sign language and text.",
   "requestFramePermissions": [
-    "geolocation"
+    "camera"
   ]
 }
