@@ -118,6 +118,7 @@ export default function App() {
   const [driverParcels, setDriverParcels] = useState<Parcel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(false);
 
   // Auth Listener
   useEffect(() => {
@@ -129,20 +130,24 @@ export default function App() {
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
             setProfile(docSnap.data() as UserProfile);
-            // Automatically go to home if logged in
-            setPage('home');
+            // Automatically go to home if logged in and profile exists
+            if (page === 'landing') setPage('home');
+          } else {
+            // If user exists but no profile, we might need to create one or stay on landing
+            console.warn("User logged in but no profile found in Firestore.");
+            setProfile(null);
           }
         } catch (err) {
           console.error("Error fetching profile:", err);
         }
       } else {
         setProfile(null);
-        setPage('landing');
+        if (page !== 'available-parcels') setPage('landing');
       }
       setLoading(false);
     });
     return unsubscribe;
-  }, []);
+  }, [page]);
 
   // Data Listener
   useEffect(() => {
@@ -201,6 +206,7 @@ export default function App() {
   const handleRegister = async (email: string, pass: string, role: 'client' | 'driver') => {
     try {
       setError(null);
+      setAuthLoading(true);
       const res = await createUserWithEmailAndPassword(auth, email, pass);
       const newUser: UserProfile = { uid: res.user.uid, email, role };
       try {
@@ -212,15 +218,20 @@ export default function App() {
       setPage('home');
     } catch (err: any) {
       setError(err.message);
+    } finally {
+      setAuthLoading(false);
     }
   };
 
   const handleLogin = async (email: string, pass: string) => {
     try {
       setError(null);
+      setAuthLoading(true);
       await signInWithEmailAndPassword(auth, email, pass);
     } catch (err: any) {
       setError(err.message);
+    } finally {
+      setAuthLoading(false);
     }
   };
 
@@ -340,7 +351,7 @@ export default function App() {
                     
                     <div className="grid grid-cols-2 gap-4 pt-4">
                       <button 
-                        onClick={() => { setSelectedRole('client'); setShowAuth(true); setIsLogin(true); }}
+                        onClick={() => { setSelectedRole('client'); setShowAuth(true); setIsLogin(false); }}
                         className="group bg-slate-900 text-white p-6 rounded-[2rem] hover:bg-slate-800 transition-all text-left shadow-2xl shadow-slate-200"
                       >
                         <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -351,7 +362,7 @@ export default function App() {
                       </button>
                       
                       <button 
-                        onClick={() => { setSelectedRole('driver'); setShowAuth(true); setIsLogin(true); }}
+                        onClick={() => { setSelectedRole('driver'); setShowAuth(true); setIsLogin(false); }}
                         className="group bg-emerald-600 text-white p-6 rounded-[2rem] hover:bg-emerald-500 transition-all text-left shadow-2xl shadow-emerald-100"
                       >
                         <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -414,6 +425,7 @@ export default function App() {
                       initialRole={selectedRole}
                       error={error}
                       clearError={() => setError(null)}
+                      loading={authLoading}
                     />
                   </div>
                 </div>
@@ -723,13 +735,14 @@ export default function App() {
 
 // --- Components ---
 
-function AuthForm({ isLogin, setIsLogin, onLogin, onRegister, initialRole, error, clearError }: any) {
+function AuthForm({ isLogin, setIsLogin, onLogin, onRegister, initialRole, error, clearError, loading }: any) {
   const [role, setRole] = useState<'client' | 'driver'>(initialRole || 'client');
 
   return (
     <form 
       onSubmit={(e) => {
         e.preventDefault();
+        if (loading) return;
         const fd = new FormData(e.currentTarget);
         const email = fd.get('email') as string;
         const pass = fd.get('pass') as string;
@@ -745,34 +758,42 @@ function AuthForm({ isLogin, setIsLogin, onLogin, onRegister, initialRole, error
         </div>
       )}
 
-      <Input icon={UserIcon} name="email" type="email" placeholder="Email" required />
-      <Input icon={ShieldCheck} name="pass" type="password" placeholder="Mot de passe" required />
+      <Input icon={UserIcon} name="email" type="email" placeholder="Email" required disabled={loading} />
+      <Input icon={ShieldCheck} name="pass" type="password" placeholder="Mot de passe" required disabled={loading} />
 
       <div className="grid grid-cols-2 gap-3 p-1 bg-slate-50 rounded-2xl border border-slate-100">
         <button 
           type="button"
+          disabled={loading}
           onClick={() => setRole('client')}
-          className={cn("py-2 rounded-xl text-sm font-bold transition-all", role === 'client' ? "bg-white shadow-sm text-emerald-600" : "text-slate-400")}
+          className={cn("py-2 rounded-xl text-sm font-bold transition-all", role === 'client' ? "bg-white shadow-sm text-emerald-600" : "text-slate-400", loading && "opacity-50")}
         >
           Client
         </button>
         <button 
           type="button"
+          disabled={loading}
           onClick={() => setRole('driver')}
-          className={cn("py-2 rounded-xl text-sm font-bold transition-all", role === 'driver' ? "bg-white shadow-sm text-emerald-600" : "text-slate-400")}
+          className={cn("py-2 rounded-xl text-sm font-bold transition-all", role === 'driver' ? "bg-white shadow-sm text-emerald-600" : "text-slate-400", loading && "opacity-50")}
         >
           Livreur
         </button>
       </div>
 
-      <button type="submit" className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-500 transition-colors">
+      <button 
+        type="submit" 
+        disabled={loading}
+        className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+      >
+        {loading && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
         {isLogin ? 'Se connecter' : "S'inscrire"}
       </button>
 
       <button 
         type="button"
+        disabled={loading}
         onClick={() => setIsLogin(!isLogin)}
-        className="w-full text-slate-400 text-sm font-medium hover:text-slate-600"
+        className="w-full text-slate-400 text-sm font-medium hover:text-slate-600 disabled:opacity-50"
       >
         {isLogin ? "Pas encore de compte ? S'inscrire" : "Déjà un compte ? Se connecter"}
       </button>
