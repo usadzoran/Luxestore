@@ -13,20 +13,33 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    // Check if user is a driver by reading their profile
+    function isDriver() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'driver';
     }
 
-    function isDriver() {
-      return isAuthenticated() && getUserData().role == 'driver';
+    // Validate email format
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     }
 
     // ===============================================================
     // User Profiles
     // ===============================================================
     match /users/{userId} {
+      // Anyone authenticated can read profiles (needed for driver/client identification)
       allow read: if isAuthenticated();
-      allow write: if isOwner(userId);
+      
+      // Users can only create/update their own profile
+      allow create: if isOwner(userId) && 
+        request.resource.data.uid == userId &&
+        request.resource.data.email is string &&
+        request.resource.data.role in ['client', 'driver'];
+        
+      allow update: if isOwner(userId) && 
+        request.resource.data.uid == userId &&
+        request.resource.data.role == resource.data.role; // Role cannot be changed
     }
 
     // ===============================================================
@@ -44,6 +57,7 @@ service cloud.firestore {
         request.resource.data.ownerId == request.auth.uid &&
         request.resource.data.status == 'pending' &&
         request.resource.data.destinationArea is string &&
+        request.resource.data.destinationArea.size() < 100 &&
         !('deliveryUID' in request.resource.data);
 
       // Update logic

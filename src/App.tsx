@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Component } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Package, 
@@ -43,6 +43,42 @@ import {
   onAuthStateChanged,
   User
 } from 'firebase/auth';
+
+// --- Error Handling ---
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string;
+    email?: string | null;
+    emailVerified?: boolean;
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(error instanceof Error ? error.message : String(error));
+}
 
 // --- Utils ---
 function cn(...inputs: ClassValue[]) {
@@ -167,7 +203,11 @@ export default function App() {
       setError(null);
       const res = await createUserWithEmailAndPassword(auth, email, pass);
       const newUser: UserProfile = { uid: res.user.uid, email, role };
-      await setDoc(doc(db, 'users', res.user.uid), newUser);
+      try {
+        await setDoc(doc(db, 'users', res.user.uid), newUser);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `users/${res.user.uid}`);
+      }
       setProfile(newUser);
       setPage('home');
     } catch (err: any) {
