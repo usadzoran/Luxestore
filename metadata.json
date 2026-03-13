@@ -1,7 +1,7 @@
 {
-  "name": "Sign Bridge",
-  "description": "Bridging the gap between sign language and text.",
+  "name": "Wassali",
+  "description": "Fast and reliable parcel delivery services.",
   "requestFramePermissions": [
-    "camera"
+    "geolocation"
   ]
 }
