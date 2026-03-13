@@ -20,6 +20,7 @@
         "receiverName": { "type": "string" },
         "receiverPhone": { "type": "string" },
         "receiverAddress": { "type": "string" },
+        "destinationArea": { "type": "string", "description": "Publicly visible destination area." },
         "ownerId": { "type": "string", "description": "UID of the user who created the request." },
         "status": { "type": "string", "enum": ["pending", "accepted", "delivered"], "description": "Current status." },
         "deliveryUID": { "type": "string", "description": "UID of the driver who accepted the parcel." },

@@ -56,6 +56,7 @@ interface Parcel {
   receiverName: string;
   receiverPhone: string;
   receiverAddress: string;
+  destinationArea: string; // New field for public view
   ownerId: string;
   status: 'pending' | 'accepted' | 'delivered';
   deliveryUID?: string;
@@ -68,13 +69,15 @@ interface UserProfile {
   role: 'client' | 'driver';
 }
 
-type Page = 'auth' | 'home' | 'add' | 'my-parcels' | 'available-parcels';
+type Page = 'landing' | 'home' | 'add' | 'my-parcels' | 'available-parcels' | 'driver-deliveries';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [page, setPage] = useState<Page>('auth');
+  const [page, setPage] = useState<Page>('landing');
+  const [isLogin, setIsLogin] = useState(true);
   const [parcels, setParcels] = useState<Parcel[]>([]);
+  const [driverParcels, setDriverParcels] = useState<Parcel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,17 +91,12 @@ export default function App() {
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
             setProfile(docSnap.data() as UserProfile);
-            setPage('home');
-          } else {
-            setPage('auth');
           }
         } catch (err) {
           console.error("Error fetching profile:", err);
-          setPage('auth');
         }
       } else {
         setProfile(null);
-        setPage('auth');
       }
       setLoading(false);
     });
@@ -109,22 +107,31 @@ export default function App() {
   useEffect(() => {
     if (!user || !profile) {
       setParcels([]);
+      setDriverParcels([]);
       return;
     }
 
     let q;
+    let dq;
+
     if (profile.role === 'client') {
-      // REQUIREMENT 3: Users can view only their own parcels.
+      // Clients see only their own parcels
       q = query(
         collection(db, 'parcels'),
         where('ownerId', '==', user.uid),
         orderBy('createdAt', 'desc')
       );
     } else {
-      // REQUIREMENT 4: Delivery personnel can view available (pending) parcels from all users.
+      // Drivers see all available (pending) parcels
       q = query(
         collection(db, 'parcels'),
         where('status', '==', 'pending'),
+        orderBy('createdAt', 'desc')
+      );
+      // Drivers also see parcels they have accepted
+      dq = query(
+        collection(db, 'parcels'),
+        where('deliveryUID', '==', user.uid),
         orderBy('createdAt', 'desc')
       );
     }
@@ -132,15 +139,20 @@ export default function App() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Parcel));
       setParcels(data);
-    }, (err) => {
-      console.error("Firestore error:", err);
-      // This might happen if index is building or rules are restrictive
-      if (err.code === 'permission-denied') {
-        setError("Accès refusé. Vérifiez vos permissions.");
-      }
     });
 
-    return unsubscribe;
+    let unsubscribeDriver: any;
+    if (dq) {
+      unsubscribeDriver = onSnapshot(dq, (snapshot) => {
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Parcel));
+        setDriverParcels(data);
+      });
+    }
+
+    return () => {
+      unsubscribe();
+      if (unsubscribeDriver) unsubscribeDriver();
+    };
   }, [user, profile]);
 
   // --- Actions ---
@@ -169,7 +181,7 @@ export default function App() {
 
   const handleLogout = () => {
     signOut(auth);
-    setPage('auth');
+    setPage('landing');
   };
 
   const addParcel = async (data: Omit<Parcel, 'id' | 'ownerId' | 'status' | 'createdAt'>) => {
@@ -195,6 +207,15 @@ export default function App() {
         status: 'accepted',
         deliveryUID: user.uid
       });
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const markAsDelivered = async (parcelId: string) => {
+    try {
+      const parcelRef = doc(db, 'parcels', parcelId);
+      await updateDoc(parcelRef, { status: 'delivered' });
     } catch (err: any) {
       setError(err.message);
     }
@@ -226,29 +247,106 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       <AnimatePresence mode="wait">
-        {page === 'auth' && (
+        {page === 'landing' && (
           <motion.div
-            key="auth"
+            key="landing"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="min-h-screen flex items-center justify-center p-6"
+            className="min-h-screen flex flex-col bg-slate-50"
           >
-            <div className="w-full max-w-md bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-100">
-              <div className="flex flex-col items-center mb-8">
-                <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mb-4">
-                  <Truck className="w-8 h-8 text-emerald-600" />
+            {/* Top Right Buttons */}
+            <div className="absolute top-6 right-6 flex gap-3 z-10">
+              {!user ? (
+                <>
+                  <button 
+                    onClick={() => { setIsLogin(true); setPage('landing'); }}
+                    className={cn(
+                      "px-6 py-2 rounded-full text-sm font-bold transition-all",
+                      isLogin ? "bg-emerald-600 text-white shadow-lg shadow-emerald-100" : "bg-white text-slate-600 border border-slate-100 hover:bg-slate-50"
+                    )}
+                  >
+                    Connexion
+                  </button>
+                  <button 
+                    onClick={() => { setIsLogin(false); setPage('landing'); }}
+                    className={cn(
+                      "px-6 py-2 rounded-full text-sm font-bold transition-all",
+                      !isLogin ? "bg-emerald-600 text-white shadow-lg shadow-emerald-100" : "bg-white text-slate-600 border border-slate-100 hover:bg-slate-50"
+                    )}
+                  >
+                    Inscription
+                  </button>
+                </>
+              ) : (
+                <button 
+                  onClick={() => setPage('home')}
+                  className="px-6 py-2 rounded-full text-sm font-bold bg-blue-600 text-white shadow-lg shadow-blue-100"
+                >
+                  Mon Tableau de Bord
+                </button>
+              )}
+            </div>
+
+            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+              <div className="mb-12">
+                <div className="w-24 h-24 bg-emerald-100 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-inner">
+                  <Truck className="w-12 h-12 text-emerald-600" />
                 </div>
-                <h2 className="text-3xl font-black tracking-tight">Wassali</h2>
-                <p className="text-slate-500 text-sm">Plateforme de livraison de colis</p>
+                <h1 className="text-5xl font-black tracking-tighter mb-4 text-slate-900">Wassali</h1>
+                <p className="text-slate-500 text-lg max-w-sm mx-auto leading-relaxed">
+                  La plateforme de confiance pour l'envoi et la livraison de vos colis en toute simplicité.
+                </p>
               </div>
 
-              <AuthForm 
-                onLogin={handleLogin} 
-                onRegister={handleRegister} 
-                error={error}
-                clearError={() => setError(null)}
-              />
+              {!user ? (
+                <div className="w-full max-w-md bg-white rounded-[2.5rem] p-8 shadow-2xl border border-slate-100">
+                  <AuthForm 
+                    isLogin={isLogin}
+                    setIsLogin={setIsLogin}
+                    onLogin={handleLogin} 
+                    onRegister={handleRegister} 
+                    error={error}
+                    clearError={() => setError(null)}
+                  />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4 w-full max-w-sm">
+                  <button 
+                    onClick={() => setPage('available-parcels')}
+                    className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center gap-4 group"
+                  >
+                    <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                      <Search className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <div className="text-left">
+                      <div className="font-bold">Voir les colis</div>
+                      <div className="text-xs text-slate-400">Trouvez des livraisons à effectuer</div>
+                    </div>
+                  </button>
+                  <button 
+                    onClick={() => setPage('home')}
+                    className="bg-emerald-600 text-white p-6 rounded-3xl shadow-lg shadow-emerald-100 flex items-center justify-center gap-3 font-bold"
+                  >
+                    Accéder à mon espace <ArrowRight className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
+
+              <div className="mt-12 grid grid-cols-3 gap-8 text-slate-400">
+                <div className="flex flex-col items-center">
+                  <ShieldCheck className="w-6 h-6 mb-2" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Sécurisé</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <Clock className="w-6 h-6 mb-2" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Rapide</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <MapPin className="w-6 h-6 mb-2" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Local</span>
+                </div>
+              </div>
             </div>
           </motion.div>
         )}
@@ -289,12 +387,20 @@ export default function App() {
                     </button>
                   </>
                 ) : (
-                  <button 
-                    onClick={() => setPage('available-parcels')}
-                    className="w-full bg-blue-600 text-white py-5 rounded-2xl font-bold text-lg shadow-lg shadow-blue-100 flex items-center justify-center gap-3"
-                  >
-                    <Search className="w-6 h-6" /> Colis disponibles
-                  </button>
+                  <>
+                    <button 
+                      onClick={() => setPage('available-parcels')}
+                      className="w-full bg-blue-600 text-white py-5 rounded-2xl font-bold text-lg shadow-lg shadow-blue-100 flex items-center justify-center gap-3"
+                    >
+                      <Search className="w-6 h-6" /> Colis disponibles
+                    </button>
+                    <button 
+                      onClick={() => setPage('driver-deliveries')}
+                      className="w-full bg-white text-slate-900 border border-slate-200 py-5 rounded-2xl font-bold text-lg shadow-sm flex items-center justify-center gap-3"
+                    >
+                      <Truck className="w-6 h-6 text-slate-400" /> Mes livraisons
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -320,16 +426,22 @@ export default function App() {
                     receiverName: fd.get('name') as string,
                     receiverPhone: fd.get('phone') as string,
                     receiverAddress: fd.get('address') as string,
+                    destinationArea: fd.get('area') as string,
                   });
                 }}
                 className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 space-y-4"
               >
+                <div className="p-4 bg-blue-50 rounded-2xl text-xs text-blue-700 flex gap-3 items-start">
+                  <ShieldCheck className="w-5 h-5 shrink-0" />
+                  <p>Les informations sensibles (nom, téléphone, adresse exacte) ne seront visibles par le livreur qu'après acceptation du colis.</p>
+                </div>
                 <Input icon={Building2} name="company" placeholder="Entreprise de livraison" required />
-                <Input icon={UserIcon} name="name" placeholder="Nom du destinataire" required />
-                <Input icon={Phone} name="phone" placeholder="Téléphone" type="tel" required />
+                <Input icon={MapPin} name="area" placeholder="Quartier / Ville de destination" required />
+                <Input icon={UserIcon} name="name" placeholder="Nom du destinataire (Privé)" required />
+                <Input icon={Phone} name="phone" placeholder="Téléphone (Privé)" type="tel" required />
                 <textarea 
                   name="address" 
-                  placeholder="Adresse de livraison" 
+                  placeholder="Adresse exacte (Privé)" 
                   required 
                   className="w-full bg-slate-50 border-none rounded-2xl py-4 px-12 focus:ring-2 focus:ring-emerald-500 min-h-[100px]"
                 />
@@ -359,13 +471,17 @@ export default function App() {
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h3 className="font-bold text-lg">{p.deliveryCompany}</h3>
-                        <p className="text-sm text-slate-500">Dest: {p.receiverName}</p>
+                        <p className="text-sm text-slate-500">{p.destinationArea}</p>
                       </div>
                       <StatusBadge status={p.status} />
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-slate-400">
-                      <Clock className="w-3 h-3" />
-                      {new Date(p.createdAt).toLocaleDateString()}
+                    <div className="space-y-2 pt-2 border-t border-slate-50">
+                      <p className="text-xs text-slate-400 flex items-center gap-2">
+                        <UserIcon className="w-3 h-3" /> {p.receiverName}
+                      </p>
+                      <p className="text-xs text-slate-400 flex items-center gap-2">
+                        <Phone className="w-3 h-3" /> {p.receiverPhone}
+                      </p>
                     </div>
                   </div>
                 ))
@@ -384,6 +500,24 @@ export default function App() {
           >
             <Header title="Colis Disponibles" />
             <div className="p-6 max-w-md mx-auto w-full space-y-4">
+              {!user && (
+                <div className="p-6 bg-blue-600 rounded-3xl text-white shadow-lg shadow-blue-100 mb-4">
+                  <h3 className="font-bold text-lg mb-2">Prêt à livrer ?</h3>
+                  <p className="text-blue-100 text-sm mb-4">Connectez-vous pour accepter des colis et commencer à gagner de l'argent.</p>
+                  <button 
+                    onClick={() => setPage('landing')}
+                    className="w-full bg-white text-blue-600 py-3 rounded-xl font-bold text-sm"
+                  >
+                    Se connecter / S'inscrire
+                  </button>
+                </div>
+              )}
+              
+              <div className="p-4 bg-amber-50 rounded-2xl text-xs text-amber-700 flex gap-3 items-center">
+                <ShieldCheck className="w-5 h-5 shrink-0" />
+                <p>Les informations précises sont masquées pour la sécurité.</p>
+              </div>
+
               {parcels.length === 0 ? (
                 <div className="text-center py-20 text-slate-400">Aucun colis disponible pour le moment.</div>
               ) : (
@@ -392,23 +526,87 @@ export default function App() {
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h3 className="font-bold text-lg">{p.deliveryCompany}</h3>
-                        <p className="text-sm text-slate-500">{p.receiverAddress}</p>
+                        <p className="text-sm text-blue-600 font-bold flex items-center gap-2">
+                          <MapPin className="w-4 h-4" /> {p.destinationArea}
+                        </p>
                       </div>
+                      {user && profile?.role === 'driver' ? (
+                        <button 
+                          onClick={() => acceptParcel(p.id)}
+                          className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md shadow-blue-100"
+                        >
+                          Accepter
+                        </button>
+                      ) : !user ? (
+                        <button 
+                          onClick={() => setPage('landing')}
+                          className="bg-slate-100 text-slate-400 px-4 py-2 rounded-xl text-sm font-bold"
+                        >
+                          Détails
+                        </button>
+                      ) : null}
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-slate-300 italic">
+                      <div className="flex items-center gap-1">
+                        <UserIcon className="w-3 h-3" /> Nom masqué
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Phone className="w-3 h-3" /> Téléphone masqué
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {page === 'driver-deliveries' && (
+          <motion.div
+            key="driver-deliveries"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="min-h-screen flex flex-col"
+          >
+            <Header title="Mes Livraisons" />
+            <div className="p-6 max-w-md mx-auto w-full space-y-4">
+              {driverParcels.length === 0 ? (
+                <div className="text-center py-20 text-slate-400">Vous n'avez pas encore accepté de colis.</div>
+              ) : (
+                driverParcels.map(p => (
+                  <div key={p.id} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="font-bold text-lg text-blue-700">{p.deliveryCompany}</h3>
+                        <p className="text-sm font-bold text-slate-900">{p.destinationArea}</p>
+                      </div>
+                      <StatusBadge status={p.status} />
+                    </div>
+                    
+                    <div className="space-y-3 py-4 border-t border-slate-50">
+                      <div className="flex items-center gap-3 text-sm">
+                        <UserIcon className="w-4 h-4 text-slate-400" />
+                        <span className="font-medium">{p.receiverName}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-sm">
+                        <Phone className="w-4 h-4 text-slate-400" />
+                        <a href={`tel:${p.receiverPhone}`} className="text-blue-600 font-bold underline">{p.receiverPhone}</a>
+                      </div>
+                      <div className="flex items-start gap-3 text-sm">
+                        <MapPin className="w-4 h-4 text-slate-400 mt-1" />
+                        <span className="text-slate-600">{p.receiverAddress}</span>
+                      </div>
+                    </div>
+
+                    {p.status === 'accepted' && (
                       <button 
-                        onClick={() => acceptParcel(p.id)}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md shadow-blue-100"
+                        onClick={() => markAsDelivered(p.id)}
+                        className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold mt-2 flex items-center justify-center gap-2"
                       >
-                        Accepter
+                        <CheckCircle className="w-5 h-5" /> Marquer comme livré
                       </button>
-                    </div>
-                    <div className="flex items-center gap-4 text-xs text-slate-400">
-                      <div className="flex items-center gap-1">
-                        <UserIcon className="w-3 h-3" /> {p.receiverName}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Phone className="w-3 h-3" /> {p.receiverPhone}
-                      </div>
-                    </div>
+                    )}
                   </div>
                 ))
               )}
@@ -422,8 +620,7 @@ export default function App() {
 
 // --- Components ---
 
-function AuthForm({ onLogin, onRegister, error, clearError }: any) {
-  const [isLogin, setIsLogin] = useState(true);
+function AuthForm({ isLogin, setIsLogin, onLogin, onRegister, error, clearError }: any) {
   const [role, setRole] = useState<'client' | 'driver'>('client');
 
   return (

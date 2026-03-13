@@ -43,6 +43,7 @@ service cloud.firestore {
       allow create: if isAuthenticated() && 
         request.resource.data.ownerId == request.auth.uid &&
         request.resource.data.status == 'pending' &&
+        request.resource.data.destinationArea is string &&
         !('deliveryUID' in request.resource.data);
 
       // Update logic
@@ -61,7 +62,18 @@ service cloud.firestore {
          // Ensure other fields remain unchanged
          request.resource.data.ownerId == resource.data.ownerId &&
          request.resource.data.deliveryCompany == resource.data.deliveryCompany &&
+         request.resource.data.destinationArea == resource.data.destinationArea &&
          request.resource.data.receiverName == resource.data.receiverName
+        ) ||
+
+        // 3. Assigned driver can mark as delivered
+        (isDriver() &&
+         resource.data.deliveryUID == request.auth.uid &&
+         resource.data.status == 'accepted' &&
+         request.resource.data.status == 'delivered' &&
+         // Ensure other fields remain unchanged
+         request.resource.data.ownerId == resource.data.ownerId &&
+         request.resource.data.deliveryUID == resource.data.deliveryUID
         )
       );
 
