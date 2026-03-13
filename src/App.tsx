@@ -76,6 +76,8 @@ export default function App() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [page, setPage] = useState<Page>('landing');
   const [isLogin, setIsLogin] = useState(true);
+  const [showAuth, setShowAuth] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<'client' | 'driver'>('client');
   const [parcels, setParcels] = useState<Parcel[]>([]);
   const [driverParcels, setDriverParcels] = useState<Parcel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,12 +93,15 @@ export default function App() {
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
             setProfile(docSnap.data() as UserProfile);
+            // Automatically go to home if logged in
+            setPage('home');
           }
         } catch (err) {
           console.error("Error fetching profile:", err);
         }
       } else {
         setProfile(null);
+        setPage('landing');
       }
       setLoading(false);
     });
@@ -253,100 +258,158 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="min-h-screen flex flex-col bg-slate-50"
+            className="min-h-screen flex flex-col bg-white"
           >
-            {/* Top Right Buttons */}
-            <div className="absolute top-6 right-6 flex gap-3 z-10">
-              {!user ? (
-                <>
-                  <button 
-                    onClick={() => { setIsLogin(true); setPage('landing'); }}
-                    className={cn(
-                      "px-6 py-2 rounded-full text-sm font-bold transition-all",
-                      isLogin ? "bg-emerald-600 text-white shadow-lg shadow-emerald-100" : "bg-white text-slate-600 border border-slate-100 hover:bg-slate-50"
-                    )}
-                  >
-                    Connexion
-                  </button>
-                  <button 
-                    onClick={() => { setIsLogin(false); setPage('landing'); }}
-                    className={cn(
-                      "px-6 py-2 rounded-full text-sm font-bold transition-all",
-                      !isLogin ? "bg-emerald-600 text-white shadow-lg shadow-emerald-100" : "bg-white text-slate-600 border border-slate-100 hover:bg-slate-50"
-                    )}
-                  >
-                    Inscription
-                  </button>
-                </>
-              ) : (
+            {/* Top Right Buttons (only if auth is shown) */}
+            {showAuth && !user && (
+              <div className="absolute top-6 right-6 flex gap-3 z-10">
                 <button 
-                  onClick={() => setPage('home')}
-                  className="px-6 py-2 rounded-full text-sm font-bold bg-blue-600 text-white shadow-lg shadow-blue-100"
+                  onClick={() => setIsLogin(true)}
+                  className={cn(
+                    "px-6 py-2 rounded-full text-sm font-bold transition-all",
+                    isLogin ? "bg-emerald-600 text-white shadow-lg shadow-emerald-100" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  )}
                 >
-                  Mon Tableau de Bord
+                  Connexion
                 </button>
-              )}
-            </div>
-
-            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-              <div className="mb-12">
-                <div className="w-24 h-24 bg-emerald-100 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-inner">
-                  <Truck className="w-12 h-12 text-emerald-600" />
-                </div>
-                <h1 className="text-5xl font-black tracking-tighter mb-4 text-slate-900">Wassali</h1>
-                <p className="text-slate-500 text-lg max-w-sm mx-auto leading-relaxed">
-                  La plateforme de confiance pour l'envoi et la livraison de vos colis en toute simplicité.
-                </p>
+                <button 
+                  onClick={() => setIsLogin(false)}
+                  className={cn(
+                    "px-6 py-2 rounded-full text-sm font-bold transition-all",
+                    !isLogin ? "bg-emerald-600 text-white shadow-lg shadow-emerald-100" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  )}
+                >
+                  Inscription
+                </button>
               </div>
+            )}
 
-              {!user ? (
-                <div className="w-full max-w-md bg-white rounded-[2.5rem] p-8 shadow-2xl border border-slate-100">
-                  <AuthForm 
-                    isLogin={isLogin}
-                    setIsLogin={setIsLogin}
-                    onLogin={handleLogin} 
-                    onRegister={handleRegister} 
-                    error={error}
-                    clearError={() => setError(null)}
-                  />
+            <div className="flex-1 flex flex-col items-center justify-center p-6">
+              {!showAuth && !user ? (
+                <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                  <div className="text-left space-y-6">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold uppercase tracking-widest">
+                      <Truck className="w-4 h-4" /> Livraison Express
+                    </div>
+                    <h1 className="text-7xl font-black tracking-tighter text-slate-900 leading-none">
+                      Wassali
+                    </h1>
+                    <p className="text-slate-500 text-xl leading-relaxed max-w-md">
+                      La solution de livraison intelligente qui connecte clients et livreurs en temps réel.
+                    </p>
+                    
+                    <div className="grid grid-cols-2 gap-4 pt-4">
+                      <button 
+                        onClick={() => { setSelectedRole('client'); setShowAuth(true); setIsLogin(true); }}
+                        className="group bg-slate-900 text-white p-6 rounded-[2rem] hover:bg-slate-800 transition-all text-left shadow-2xl shadow-slate-200"
+                      >
+                        <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                          <UserIcon className="w-6 h-6" />
+                        </div>
+                        <div className="font-bold text-lg">Client</div>
+                        <div className="text-xs text-slate-400">Envoyer un colis</div>
+                      </button>
+                      
+                      <button 
+                        onClick={() => { setSelectedRole('driver'); setShowAuth(true); setIsLogin(true); }}
+                        className="group bg-emerald-600 text-white p-6 rounded-[2rem] hover:bg-emerald-500 transition-all text-left shadow-2xl shadow-emerald-100"
+                      >
+                        <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                          <Truck className="w-6 h-6" />
+                        </div>
+                        <div className="font-bold text-lg">Livreur</div>
+                        <div className="text-xs text-emerald-100">Gagner de l'argent</div>
+                      </button>
+                    </div>
+
+                    <button 
+                      onClick={() => setPage('available-parcels')}
+                      className="w-full py-4 text-slate-400 text-sm font-bold hover:text-slate-600 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Search className="w-4 h-4" /> Voir les colis disponibles sans compte
+                    </button>
+                  </div>
+
+                  <div className="relative">
+                    <div className="absolute -inset-4 bg-emerald-100 rounded-[3rem] -rotate-3 scale-95 opacity-50"></div>
+                    <img 
+                      src="https://images.unsplash.com/photo-1586769852836-bc069f19e1b6?auto=format&fit=crop&q=80&w=1000" 
+                      alt="Delivery" 
+                      className="relative rounded-[3rem] shadow-2xl w-full aspect-[4/5] object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute -bottom-6 -right-6 bg-white p-6 rounded-3xl shadow-xl border border-slate-50 flex items-center gap-4 animate-bounce">
+                      <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center">
+                        <CheckCircle className="w-6 h-6 text-emerald-600" />
+                      </div>
+                      <div>
+                        <div className="font-black text-slate-900">100%</div>
+                        <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Sécurisé</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : showAuth && !user ? (
+                <div className="w-full max-w-md">
+                  <button 
+                    onClick={() => setShowAuth(false)}
+                    className="mb-8 flex items-center gap-2 text-slate-400 hover:text-slate-600 font-bold text-sm"
+                  >
+                    <ChevronLeft className="w-4 h-4" /> Retour à l'accueil
+                  </button>
+                  <div className="bg-white rounded-[2.5rem] p-8 shadow-2xl border border-slate-100">
+                    <div className="flex flex-col items-center mb-8">
+                      <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mb-4">
+                        {selectedRole === 'client' ? <UserIcon className="w-8 h-8 text-emerald-600" /> : <Truck className="w-8 h-8 text-emerald-600" />}
+                      </div>
+                      <h2 className="text-2xl font-black tracking-tight">
+                        {isLogin ? 'Connexion' : 'Inscription'} {selectedRole === 'client' ? 'Client' : 'Livreur'}
+                      </h2>
+                    </div>
+                    <AuthForm 
+                      isLogin={isLogin}
+                      setIsLogin={setIsLogin}
+                      onLogin={handleLogin} 
+                      onRegister={handleRegister} 
+                      initialRole={selectedRole}
+                      error={error}
+                      clearError={() => setError(null)}
+                    />
+                  </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-4 w-full max-w-sm">
-                  <button 
-                    onClick={() => setPage('available-parcels')}
-                    className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center gap-4 group"
-                  >
-                    <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-                      <Search className="w-6 h-6 text-blue-600" />
+                <div className="flex flex-col items-center">
+                   <div className="mb-12">
+                    <div className="w-24 h-24 bg-emerald-100 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-inner">
+                      <Truck className="w-12 h-12 text-emerald-600" />
                     </div>
-                    <div className="text-left">
-                      <div className="font-bold">Voir les colis</div>
-                      <div className="text-xs text-slate-400">Trouvez des livraisons à effectuer</div>
-                    </div>
-                  </button>
-                  <button 
-                    onClick={() => setPage('home')}
-                    className="bg-emerald-600 text-white p-6 rounded-3xl shadow-lg shadow-emerald-100 flex items-center justify-center gap-3 font-bold"
-                  >
-                    Accéder à mon espace <ArrowRight className="w-5 h-5" />
-                  </button>
+                    <h1 className="text-5xl font-black tracking-tighter mb-4 text-slate-900">Wassali</h1>
+                    <p className="text-slate-500 text-lg max-w-sm mx-auto leading-relaxed">
+                      Ravi de vous revoir ! Accédez à votre espace pour gérer vos livraisons.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 w-full max-w-sm">
+                    <button 
+                      onClick={() => setPage('available-parcels')}
+                      className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center gap-4 group"
+                    >
+                      <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                        <Search className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div className="text-left">
+                        <div className="font-bold">Voir les colis</div>
+                        <div className="text-xs text-slate-400">Trouvez des livraisons à effectuer</div>
+                      </div>
+                    </button>
+                    <button 
+                      onClick={() => setPage('home')}
+                      className="bg-emerald-600 text-white p-6 rounded-3xl shadow-lg shadow-emerald-100 flex items-center justify-center gap-3 font-bold"
+                    >
+                      Accéder à mon espace <ArrowRight className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
               )}
-
-              <div className="mt-12 grid grid-cols-3 gap-8 text-slate-400">
-                <div className="flex flex-col items-center">
-                  <ShieldCheck className="w-6 h-6 mb-2" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Sécurisé</span>
-                </div>
-                <div className="flex flex-col items-center">
-                  <Clock className="w-6 h-6 mb-2" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Rapide</span>
-                </div>
-                <div className="flex flex-col items-center">
-                  <MapPin className="w-6 h-6 mb-2" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Local</span>
-                </div>
-              </div>
             </div>
           </motion.div>
         )}
@@ -620,8 +683,8 @@ export default function App() {
 
 // --- Components ---
 
-function AuthForm({ isLogin, setIsLogin, onLogin, onRegister, error, clearError }: any) {
-  const [role, setRole] = useState<'client' | 'driver'>('client');
+function AuthForm({ isLogin, setIsLogin, onLogin, onRegister, initialRole, error, clearError }: any) {
+  const [role, setRole] = useState<'client' | 'driver'>(initialRole || 'client');
 
   return (
     <form 
@@ -638,33 +701,31 @@ function AuthForm({ isLogin, setIsLogin, onLogin, onRegister, error, clearError 
       {error && (
         <div className="p-3 bg-rose-50 text-rose-600 text-xs rounded-xl border border-rose-100 flex justify-between items-center">
           {error}
-          <button onClick={clearError} className="p-1">×</button>
+          <button onClick={clearError} className="p-1 text-rose-400 hover:text-rose-600">×</button>
         </div>
       )}
 
       <Input icon={UserIcon} name="email" type="email" placeholder="Email" required />
       <Input icon={ShieldCheck} name="pass" type="password" placeholder="Mot de passe" required />
 
-      {!isLogin && (
-        <div className="grid grid-cols-2 gap-3 p-1 bg-slate-50 rounded-2xl border border-slate-100">
-          <button 
-            type="button"
-            onClick={() => setRole('client')}
-            className={cn("py-2 rounded-xl text-sm font-bold transition-all", role === 'client' ? "bg-white shadow-sm text-blue-600" : "text-slate-400")}
-          >
-            Client
-          </button>
-          <button 
-            type="button"
-            onClick={() => setRole('driver')}
-            className={cn("py-2 rounded-xl text-sm font-bold transition-all", role === 'driver' ? "bg-white shadow-sm text-blue-600" : "text-slate-400")}
-          >
-            Livreur
-          </button>
-        </div>
-      )}
+      <div className="grid grid-cols-2 gap-3 p-1 bg-slate-50 rounded-2xl border border-slate-100">
+        <button 
+          type="button"
+          onClick={() => setRole('client')}
+          className={cn("py-2 rounded-xl text-sm font-bold transition-all", role === 'client' ? "bg-white shadow-sm text-emerald-600" : "text-slate-400")}
+        >
+          Client
+        </button>
+        <button 
+          type="button"
+          onClick={() => setRole('driver')}
+          className={cn("py-2 rounded-xl text-sm font-bold transition-all", role === 'driver' ? "bg-white shadow-sm text-emerald-600" : "text-slate-400")}
+        >
+          Livreur
+        </button>
+      </div>
 
-      <button type="submit" className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-emerald-100">
+      <button type="submit" className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-500 transition-colors">
         {isLogin ? 'Se connecter' : "S'inscrire"}
       </button>
 
