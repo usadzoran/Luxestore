@@ -1,0 +1,41 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with role.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["client", "driver"] }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Parcel": {
+      "title": "Parcel",
+      "description": "A delivery request for a parcel.",
+      "type": "object",
+      "properties": {
+        "deliveryCompany": { "type": "string" },
+        "receiverName": { "type": "string" },
+        "receiverPhone": { "type": "string" },
+        "receiverAddress": { "type": "string" },
+        "ownerId": { "type": "string", "description": "UID of the user who created the request." },
+        "status": { "type": "string", "enum": ["pending", "accepted", "delivered"], "description": "Current status." },
+        "deliveryUID": { "type": "string", "description": "UID of the driver who accepted the parcel." },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["deliveryCompany", "receiverName", "receiverPhone", "receiverAddress", "ownerId", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users": {
+      "schema": { "$ref": "User" },
+      "description": "User profiles and roles."
+    },
+    "parcels": {
+      "schema": { "$ref": "Parcel" },
+      "description": "Collection of all parcel delivery requests."
+    }
+  }
+}
