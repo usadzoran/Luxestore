@@ -144,6 +144,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/admin-login" element={<AdminLoginWrapper />} />
+        <Route path="/wassali-admin" element={<AdminLoginWrapper />} />
         <Route path="/secure-admin-panel" element={<AdminDashboardWrapper />} />
         <Route path="*" element={<MainApp />} />
       </Routes>
