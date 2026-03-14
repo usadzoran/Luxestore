@@ -1,6 +1,6 @@
 {
-  "name": "LuxeStore",
-  "description": "Premium E-commerce platform with a secure, hidden admin dashboard.",
+  "name": "Wassali",
+  "description": "Premium and reliable parcel delivery services.",
   "requestFramePermissions": [
     "geolocation"
   ]

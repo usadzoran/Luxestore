@@ -102,7 +102,7 @@ export function AdminLogin({ onLogin }: { onLogin: () => void }) {
           <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mb-4">
             <LayoutDashboard className="w-8 h-8 text-emerald-600" />
           </div>
-          <h1 className="text-3xl font-black tracking-tight text-slate-900">LuxeStore Admin</h1>
+          <h1 className="text-3xl font-black tracking-tight text-slate-900">Wassali Admin</h1>
           <p className="text-slate-500 mt-2">Connectez-vous pour gérer la plateforme</p>
         </div>
 
@@ -163,7 +163,7 @@ export function AdminDashboard() {
           <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center shrink-0">
             <LayoutDashboard className="w-6 h-6 text-white" />
           </div>
-          {isSidebarOpen && <span className="font-black text-xl tracking-tighter">LuxeStore</span>}
+          {isSidebarOpen && <span className="font-black text-xl tracking-tighter">Wassali</span>}
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
@@ -221,7 +221,7 @@ export function AdminDashboard() {
           <h2 className="text-2xl font-black text-slate-900 capitalize">{activeTab}</h2>
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
-              <div className="font-bold text-slate-900">Admin LuxeStore</div>
+              <div className="font-bold text-slate-900">Admin Wassali</div>
               <div className="text-xs text-slate-400">Super Administrateur</div>
             </div>
             <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center">
@@ -343,7 +343,7 @@ function DistributorsSection() {
     await addDoc(collection(db, 'users'), {
       ...formData,
       role: 'driver',
-      email: `${formData.name.toLowerCase().replace(' ', '.')}@luxestore.com`,
+      email: `${formData.name.toLowerCase().replace(' ', '.')}@wassali.com`,
       deliveriesCount: 0
     });
     setShowAddModal(false);
