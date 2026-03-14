@@ -7,36 +7,101 @@
       "properties": {
         "uid": { "type": "string" },
         "email": { "type": "string" },
-        "role": { "type": "string", "enum": ["client", "driver"] }
+        "role": { "type": "string", "enum": ["client", "admin"] }
       },
       "required": ["uid", "email", "role"]
     },
-    "Parcel": {
-      "title": "Parcel",
-      "description": "A delivery request for a parcel.",
+    "Distributor": {
+      "title": "Distributor",
+      "description": "A distributor managing orders.",
       "type": "object",
       "properties": {
-        "deliveryCompany": { "type": "string" },
-        "receiverName": { "type": "string" },
-        "receiverPhone": { "type": "string" },
-        "receiverAddress": { "type": "string" },
-        "destinationArea": { "type": "string", "description": "Publicly visible destination area." },
-        "ownerId": { "type": "string", "description": "UID of the user who created the request." },
-        "status": { "type": "string", "enum": ["pending", "accepted", "delivered"], "description": "Current status." },
-        "deliveryUID": { "type": "string", "description": "UID of the driver who accepted the parcel." },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "city": { "type": "string" },
+        "assignedOrders": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "inactive"] }
+      },
+      "required": ["name", "phone", "city", "status"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Customer information.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "orderCount": { "type": "number" },
+        "totalSpent": { "type": "number" }
+      },
+      "required": ["name", "phone", "email"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "An e-commerce order.",
+      "type": "object",
+      "properties": {
+        "orderNumber": { "type": "string" },
+        "customerName": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "product": { "type": "string" },
+        "distributorId": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Preparing", "Shipped", "Delivered", "Cancelled"] },
         "createdAt": { "type": "number" }
       },
-      "required": ["deliveryCompany", "receiverName", "receiverPhone", "receiverAddress", "ownerId", "status", "createdAt"]
+      "required": ["orderNumber", "customerName", "phone", "address", "product", "status", "createdAt"]
+    },
+    "AdPlacement": {
+      "title": "AdPlacement",
+      "description": "HTML code for advertisements.",
+      "type": "object",
+      "properties": {
+        "topBar": { "type": "string" },
+        "productsPage": { "type": "string" },
+        "productPage": { "type": "string" },
+        "footer": { "type": "string" }
+      },
+      "required": ["topBar", "productsPage", "productPage", "footer"]
+    },
+    "VisitorStats": {
+      "title": "VisitorStats",
+      "description": "Website visitor statistics.",
+      "type": "object",
+      "properties": {
+        "total": { "type": "number" },
+        "today": { "type": "number" },
+        "pagesVisited": { "type": "number" },
+        "recent": { "type": "array", "items": { "type": "object" } }
+      },
+      "required": ["total", "today", "pagesVisited"]
     }
   },
   "firestore": {
     "users": {
       "schema": { "$ref": "User" },
-      "description": "User profiles and roles."
+      "description": "User profiles."
     },
-    "parcels": {
-      "schema": { "$ref": "Parcel" },
-      "description": "Collection of all parcel delivery requests."
+    "distributors": {
+      "schema": { "$ref": "Distributor" },
+      "description": "Distributor management."
+    },
+    "customers": {
+      "schema": { "$ref": "Customer" },
+      "description": "Customer list."
+    },
+    "orders": {
+      "schema": { "$ref": "Order" },
+      "description": "Order management."
+    },
+    "ads": {
+      "schema": { "$ref": "AdPlacement" },
+      "description": "Ad HTML placements."
+    },
+    "stats": {
+      "schema": { "$ref": "VisitorStats" },
+      "description": "Visitor statistics."
     }
   }
 }

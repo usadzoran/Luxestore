@@ -17,8 +17,11 @@ import {
   UserPlus,
   ShieldCheck,
   Clock,
-  CheckCircle
+  CheckCircle,
+  LayoutDashboard
 } from 'lucide-react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { AdminLogin, AdminDashboard } from './Admin';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -107,9 +110,60 @@ interface UserProfile {
   role: 'client' | 'driver';
 }
 
+interface AdsConfig {
+  topBar: string;
+  products: string;
+  tracking: string;
+  footer: string;
+}
+
 type Page = 'landing' | 'home' | 'add' | 'my-parcels' | 'available-parcels' | 'driver-deliveries';
 
+function useAds() {
+  const [ads, setAds] = useState<AdsConfig | null>(null);
+
+  useEffect(() => {
+    const docRef = doc(db, 'config', 'ads');
+    return onSnapshot(docRef, (doc) => {
+      if (doc.exists()) {
+        setAds(doc.data() as AdsConfig);
+      }
+    });
+  }, []);
+
+  return ads;
+}
+
+function AdSlot({ html }: { html?: string }) {
+  if (!html) return null;
+  return <div className="w-full overflow-hidden flex justify-center" dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
 export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/admin-login" element={<AdminLoginWrapper />} />
+        <Route path="/secure-admin-panel" element={<AdminDashboardWrapper />} />
+        <Route path="*" element={<MainApp />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+function AdminLoginWrapper() {
+  const [isAdmin, setIsAdmin] = useState(localStorage.getItem('admin_auth') === 'true');
+  if (isAdmin) return <Navigate to="/secure-admin-panel" />;
+  return <AdminLogin onLogin={() => setIsAdmin(true)} />;
+}
+
+function AdminDashboardWrapper() {
+  const isAdmin = localStorage.getItem('admin_auth') === 'true';
+  if (!isAdmin) return <Navigate to="/admin-login" />;
+  return <AdminDashboard />;
+}
+
+function MainApp() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [page, setPage] = useState<Page>('landing');
@@ -121,6 +175,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
+  const ads = useAds();
 
   // Auth Listener
   useEffect(() => {
@@ -333,8 +388,10 @@ export default function App() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
-      <AnimatePresence mode="wait">
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 flex flex-col">
+      <AdSlot html={ads?.topBar} />
+      <div className="flex-1 flex flex-col">
+        <AnimatePresence mode="wait">
         {page === 'landing' && (
           <motion.div
             key="landing"
@@ -564,6 +621,7 @@ export default function App() {
             className="min-h-screen flex flex-col"
           >
             <Header title="Nouveau Colis" />
+            <AdSlot html={ads?.products} />
             <div className="p-6 max-w-md mx-auto w-full">
               <form 
                 onSubmit={(e) => {
@@ -610,6 +668,7 @@ export default function App() {
             className="min-h-screen flex flex-col"
           >
             <Header title="Mes Colis" />
+            <AdSlot html={ads?.tracking} />
             <div className="p-6 max-w-md mx-auto w-full space-y-4">
               {parcels.length === 0 ? (
                 <div className="text-center py-20 text-slate-400">Aucun colis trouvé.</div>
@@ -647,6 +706,7 @@ export default function App() {
             className="min-h-screen flex flex-col"
           >
             <Header title="Colis Disponibles" />
+            <AdSlot html={ads?.products} />
             <div className="p-6 max-w-md mx-auto w-full space-y-4">
               {!user && (
                 <div className="p-6 bg-blue-600 rounded-3xl text-white shadow-lg shadow-blue-100 mb-4">
@@ -718,6 +778,7 @@ export default function App() {
             className="min-h-screen flex flex-col"
           >
             <Header title="Mes Livraisons" />
+            <AdSlot html={ads?.tracking} />
             <div className="p-6 max-w-md mx-auto w-full space-y-4">
               {driverParcels.length === 0 ? (
                 <div className="text-center py-20 text-slate-400">Vous n'avez pas encore accepté de colis.</div>
@@ -762,6 +823,8 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
+      <AdSlot html={ads?.footer} />
     </div>
   );
 }

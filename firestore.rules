@@ -52,5 +52,11 @@ service cloud.firestore {
 
       allow delete: if false; // منع الحذف نهائياً
     }
+
+    // --- مجموعة الإعدادات (الإعلانات) ---
+    match /config/ads {
+      allow read: if true; // الإعلانات عامة للجميع
+      allow write: if isAuthenticated(); // تقييد الكتابة للمسجلين (كحد أدنى للأمان في هذا النموذج)
+    }
   }
 }
