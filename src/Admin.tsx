@@ -32,7 +32,7 @@ import {
   getDocs,
   limit
 } from 'firebase/firestore';
-import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -141,16 +141,27 @@ export function AdminLogin({ onLogin }: { onLogin: () => void }) {
       try {
         await signInWithEmailAndPassword(auth, username, password);
       } catch (err: any) {
-        // If user doesn't exist and it's the admin email, try creating it
-        if ((err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') && username === 'wahablila31000@gmail.com') {
-          await createUserWithEmailAndPassword(auth, username, password);
-          // Also create a user document in Firestore with admin role
-          await setDoc(doc(db, 'users', auth.currentUser!.uid), {
-            email: username,
-            role: 'admin',
-            createdAt: Date.now(),
-            name: 'Super Admin'
-          });
+        // If it's the admin email, we try to handle auto-creation or wrong password
+        if (username === 'wahablila31000@gmail.com') {
+          if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+            try {
+              await createUserWithEmailAndPassword(auth, username, password);
+              // Create user document
+              await setDoc(doc(db, 'users', auth.currentUser!.uid), {
+                email: username,
+                role: 'admin',
+                createdAt: Date.now(),
+                name: 'Super Admin'
+              });
+            } catch (createErr: any) {
+              if (createErr.code === 'auth/email-already-in-use') {
+                throw new Error('Mot de passe incorrect pour ce compte administrateur.');
+              }
+              throw createErr;
+            }
+          } else {
+            throw err;
+          }
         } else {
           throw err;
         }
@@ -159,11 +170,7 @@ export function AdminLogin({ onLogin }: { onLogin: () => void }) {
       onLogin();
     } catch (err: any) {
       console.error('Admin login error:', err);
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-        setError('Email ou mot de passe incorrect');
-      } else {
-        setError('Erreur de connexion: ' + err.message);
-      }
+      setError(err.message || 'Email ou mot de passe incorrect');
     } finally {
       setLoading(false);
     }
@@ -182,8 +189,26 @@ export function AdminLogin({ onLogin }: { onLogin: () => void }) {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
-            <div className="p-4 bg-rose-50 text-rose-600 text-sm rounded-2xl border border-rose-100 text-center">
-              {error}
+            <div className="space-y-2">
+              <div className="p-4 bg-rose-50 text-rose-600 text-sm rounded-2xl border border-rose-100 text-center">
+                {error}
+              </div>
+              {username === 'wahablila31000@gmail.com' && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await sendPasswordResetEmail(auth, username);
+                      setError('Un e-mail de réinitialisation a été envoyé à ' + username);
+                    } catch (err: any) {
+                      setError('Erreur: ' + err.message);
+                    }
+                  }}
+                  className="w-full text-emerald-600 text-sm font-medium hover:underline"
+                >
+                  Réinitialiser le mot de passe ?
+                </button>
+              )}
             </div>
           )}
           <div>
