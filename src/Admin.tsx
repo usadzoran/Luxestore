@@ -749,6 +749,12 @@ function CustomersSection() {
     c.email.toLowerCase().includes(search.toLowerCase())
   );
 
+  const handleDelete = async (uid: string) => {
+    if (window.confirm('Supprimer ce client ?')) {
+      await deleteDoc(doc(db, 'users', uid));
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="relative w-full sm:w-96">
@@ -772,6 +778,7 @@ function CustomersSection() {
                 <th className="px-6 py-4">Adresse</th>
                 <th className="px-6 py-4">Inscription</th>
                 <th className="px-6 py-4">Colis Envoyés</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -788,6 +795,14 @@ function CustomersSection() {
                   </td>
                   <td className="px-6 py-4">
                     <span className="font-bold text-blue-600">{c.parcelsSent}</span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button 
+                      onClick={() => handleDelete(c.uid)}
+                      className="p-2 hover:bg-rose-50 text-rose-600 rounded-xl transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -826,6 +841,12 @@ function ParcelsSection() {
     await updateDoc(doc(db, 'parcels', id), { deliveryUID: driverUid, status: 'collected' });
   };
 
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Supprimer ce colis ?')) {
+      await deleteDoc(doc(db, 'parcels', id));
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="bg-white rounded-[2rem] overflow-hidden shadow-sm border border-slate-100">
@@ -838,6 +859,7 @@ function ParcelsSection() {
                 <th className="px-6 py-4">Destination</th>
                 <th className="px-6 py-4">Livreur</th>
                 <th className="px-6 py-4">Statut</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -880,6 +902,14 @@ function ParcelsSection() {
                       <option value="returned">Retourné</option>
                       <option value="cancelled">Annulé</option>
                     </select>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button 
+                      onClick={() => handleDelete(p.id)}
+                      className="p-2 hover:bg-rose-50 text-rose-600 rounded-xl transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </td>
                 </tr>
               ))}
