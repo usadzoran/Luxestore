@@ -87,7 +87,7 @@ export function AdminLogin({ onLogin }: { onLogin: () => void }) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === 'admin' && password === 'admin123') {
+    if (username === 'wassali@Gmail.com' && password === 'vampirewahab31') {
       localStorage.setItem('admin_auth', 'true');
       onLogin();
     } else {
@@ -113,13 +113,13 @@ export function AdminLogin({ onLogin }: { onLogin: () => void }) {
             </div>
           )}
           <div>
-            <label className="block text-sm font-bold text-slate-700 mb-2 ml-1">Nom d'utilisateur</label>
+            <label className="block text-sm font-bold text-slate-700 mb-2 ml-1">Email</label>
             <input 
               type="text" 
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="w-full bg-slate-50 border-none rounded-2xl py-4 px-6 focus:ring-2 focus:ring-emerald-500"
-              placeholder="admin"
+              placeholder="wassali@Gmail.com"
               required
             />
           </div>
