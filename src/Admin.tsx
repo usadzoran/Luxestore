@@ -29,7 +29,8 @@ import {
   addDoc,
   setDoc,
   getDoc,
-  getDocs
+  getDocs,
+  limit
 } from 'firebase/firestore';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 
@@ -331,12 +332,12 @@ function VisitorsSection() {
     drivers: 0,
     parcels: 0
   });
+  const [activities, setActivities] = useState<any[]>([]);
 
   useEffect(() => {
     // Real-time stats from Firestore
     const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
       const drivers = snap.docs.filter(d => d.data().role === 'driver').length;
-      const clients = snap.docs.filter(d => d.data().role === 'client').length;
       setStats(prev => ({ ...prev, total: snap.size, drivers }));
     });
 
@@ -344,11 +345,56 @@ function VisitorsSection() {
       setStats(prev => ({ ...prev, parcels: snap.size }));
     });
 
+    // Recent activities (Users and Parcels)
+    const usersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(5));
+    const parcelsQuery = query(collection(db, 'parcels'), orderBy('createdAt', 'desc'), limit(5));
+
+    const unsubRecentUsers = onSnapshot(usersQuery, (snap) => {
+      const newUsers = snap.docs.map(doc => ({
+        id: doc.id,
+        type: 'user',
+        label: doc.data().role === 'driver' ? 'Nouveau Livreur' : 'Nouveau Client',
+        name: doc.data().name || doc.data().email.split('@')[0],
+        time: doc.data().createdAt
+      }));
+      setActivities(prev => {
+        const filtered = prev.filter(a => a.type !== 'user');
+        return [...filtered, ...newUsers].sort((a, b) => b.time - a.time).slice(0, 10);
+      });
+    });
+
+    const unsubRecentParcels = onSnapshot(parcelsQuery, (snap) => {
+      const newParcels = snap.docs.map(doc => ({
+        id: doc.id,
+        type: 'parcel',
+        label: 'Nouveau Colis',
+        name: `Colis #${doc.id.slice(-4).toUpperCase()}`,
+        time: doc.data().createdAt
+      }));
+      setActivities(prev => {
+        const filtered = prev.filter(a => a.type !== 'parcel');
+        return [...filtered, ...newParcels].sort((a, b) => b.time - a.time).slice(0, 10);
+      });
+    });
+
     return () => {
       unsubUsers();
       unsubParcels();
+      unsubRecentUsers();
+      unsubRecentParcels();
     };
   }, []);
+
+  const formatTime = (ts: number) => {
+    if (!ts) return 'N/A';
+    const diff = Date.now() - ts;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'À l\'instant';
+    if (mins < 60) return `Il y a ${mins} min`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `Il y a ${hours} h`;
+    return new Date(ts).toLocaleDateString();
+  };
 
   return (
     <div className="space-y-8">
@@ -372,25 +418,36 @@ function VisitorsSection() {
 
       <div className="bg-white rounded-[2rem] overflow-hidden shadow-sm border border-slate-100">
         <div className="p-6 border-b border-slate-100">
-          <h3 className="text-xl font-bold">Visites Récentes</h3>
+          <h3 className="text-xl font-bold">Activités Récentes</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left min-w-[600px]">
             <thead className="bg-slate-50 text-slate-400 text-xs font-bold uppercase tracking-widest">
               <tr>
-                <th className="px-6 py-4">IP Address</th>
-                <th className="px-6 py-4">Page</th>
+                <th className="px-6 py-4">Type</th>
+                <th className="px-6 py-4">Détails</th>
                 <th className="px-6 py-4">Date & Heure</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {[1, 2, 3, 4, 5].map((_, i) => (
-                <tr key={i} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 font-mono text-sm text-slate-600">192.168.1.{10 + i}</td>
-                  <td className="px-6 py-4"><span className="px-3 py-1 bg-slate-100 rounded-full text-xs font-bold">/tracking</span></td>
-                  <td className="px-6 py-4 text-sm text-slate-400">Il y a {i + 2} minutes</td>
+              {activities.length > 0 ? activities.map((activity) => (
+                <tr key={activity.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4">
+                    <span className={cn(
+                      "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
+                      activity.type === 'user' ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
+                    )}>
+                      {activity.label}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 font-bold text-slate-600">{activity.name}</td>
+                  <td className="px-6 py-4 text-sm text-slate-400">{formatTime(activity.time)}</td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan={3} className="px-6 py-8 text-center text-slate-400 italic">Aucune activité récente</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -448,7 +505,8 @@ function DistributorsSection() {
       ...formData,
       role: 'driver',
       email: `${formData.name.toLowerCase().replace(' ', '.')}@wassali.com`,
-      deliveriesCount: 0
+      deliveriesCount: 0,
+      createdAt: Date.now()
     });
     setShowAddModal(false);
     setFormData({ name: '', phone: '', city: '', vehicleType: 'Moto', status: 'active' });
@@ -487,6 +545,7 @@ function DistributorsSection() {
                 <th className="px-6 py-4">Livreur</th>
                 <th className="px-6 py-4">Contact</th>
                 <th className="px-6 py-4">Livraisons</th>
+                <th className="px-6 py-4">Inscription</th>
                 <th className="px-6 py-4">Statut</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
@@ -501,6 +560,9 @@ function DistributorsSection() {
                   <td className="px-6 py-4 text-sm text-slate-600">{d.phone || 'N/A'}</td>
                   <td className="px-6 py-4">
                     <span className="font-bold text-emerald-600">{d.deliveriesCount}</span>
+                  </td>
+                  <td className="px-6 py-4 text-xs text-slate-400">
+                    {d.createdAt ? new Date(d.createdAt).toLocaleDateString() : 'Ancien'}
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
@@ -633,6 +695,7 @@ function CustomersSection() {
                 <th className="px-6 py-4">Client</th>
                 <th className="px-6 py-4">Contact</th>
                 <th className="px-6 py-4">Adresse</th>
+                <th className="px-6 py-4">Inscription</th>
                 <th className="px-6 py-4">Colis Envoyés</th>
               </tr>
             </thead>
@@ -645,6 +708,9 @@ function CustomersSection() {
                   </td>
                   <td className="px-6 py-4 text-sm text-slate-600">{c.phone || 'N/A'}</td>
                   <td className="px-6 py-4 text-sm text-slate-400">{c.address || 'Non renseignée'}</td>
+                  <td className="px-6 py-4 text-xs text-slate-400">
+                    {c.createdAt ? new Date(c.createdAt).toLocaleDateString() : 'Ancien'}
+                  </td>
                   <td className="px-6 py-4">
                     <span className="font-bold text-blue-600">{c.parcelsSent}</span>
                   </td>

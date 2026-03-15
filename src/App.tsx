@@ -111,6 +111,7 @@ interface UserProfile {
   name?: string;
   phone?: string;
   address?: string;
+  createdAt?: number;
 }
 
 interface AdsConfig {
@@ -269,7 +270,12 @@ function MainApp() {
       setError(null);
       setAuthLoading(true);
       const res = await createUserWithEmailAndPassword(auth, email, pass);
-      const newUser: UserProfile = { uid: res.user.uid, email, role };
+      const newUser: UserProfile = { 
+        uid: res.user.uid, 
+        email, 
+        role,
+        createdAt: Date.now()
+      };
       try {
         await setDoc(doc(db, 'users', res.user.uid), newUser);
       } catch (err) {
@@ -311,7 +317,8 @@ function MainApp() {
         const newUser: UserProfile = { 
           uid: res.user.uid, 
           email: res.user.email || '', 
-          role 
+          role,
+          createdAt: Date.now()
         };
         await setDoc(docRef, newUser);
         setProfile(newUser);
