@@ -177,7 +177,7 @@ export function AdminLogin({ onLogin }: { onLogin: () => void }) {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="w-full bg-slate-50 border-none rounded-2xl py-4 px-6 focus:ring-2 focus:ring-emerald-500"
-              placeholder="wassali@Gmail.com"
+              placeholder="wahablila31000@gmail.com"
               required
               disabled={loading}
             />
