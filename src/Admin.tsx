@@ -13,7 +13,8 @@ import {
   BarChart3, 
   Megaphone,
   Save,
-  Play
+  Play,
+  Menu
 } from 'lucide-react';
 import { db } from './firebase';
 import { 
@@ -29,6 +30,14 @@ import {
   setDoc,
   getDoc
 } from 'firebase/firestore';
+
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+// --- Utils ---
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 // --- Types ---
 interface VisitorStat {
@@ -148,7 +157,20 @@ export function AdminLogin({ onLogin }: { onLogin: () => void }) {
 
 export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'visitors' | 'distributors' | 'customers' | 'parcels' | 'ads'>('visitors');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 1024);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 1024) {
+        setIsSidebarOpen(true);
+      } else {
+        setIsSidebarOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('admin_auth');
@@ -156,14 +178,26 @@ export function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-slate-50 flex relative">
+      {/* Mobile Sidebar Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className={`bg-slate-900 text-white transition-all duration-300 flex flex-col ${isSidebarOpen ? 'w-72' : 'w-20'}`}>
+      <aside className={cn(
+        "bg-slate-900 text-white transition-all duration-300 flex flex-col fixed inset-y-0 left-0 z-50 lg:relative",
+        isSidebarOpen ? 'w-72' : 'w-0 lg:w-20 overflow-hidden lg:overflow-visible',
+        isMobileMenuOpen ? 'translate-x-0 w-72' : '-translate-x-full lg:translate-x-0'
+      )}>
         <div className="p-6 flex items-center gap-4 border-b border-white/10">
           <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center shrink-0">
             <LayoutDashboard className="w-6 h-6 text-white" />
           </div>
-          {isSidebarOpen && <span className="font-black text-xl tracking-tighter">Wassali</span>}
+          {(isSidebarOpen || isMobileMenuOpen) && <span className="font-black text-xl tracking-tighter">Wassali</span>}
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
@@ -171,36 +205,36 @@ export function AdminDashboard() {
             icon={<BarChart3 />} 
             label="Visiteurs" 
             active={activeTab === 'visitors'} 
-            onClick={() => setActiveTab('visitors')} 
-            collapsed={!isSidebarOpen}
+            onClick={() => { setActiveTab('visitors'); setIsMobileMenuOpen(false); }} 
+            collapsed={!isSidebarOpen && !isMobileMenuOpen}
           />
           <SidebarItem 
             icon={<Truck />} 
             label="Livreurs" 
             active={activeTab === 'distributors'} 
-            onClick={() => setActiveTab('distributors')} 
-            collapsed={!isSidebarOpen}
+            onClick={() => { setActiveTab('distributors'); setIsMobileMenuOpen(false); }} 
+            collapsed={!isSidebarOpen && !isMobileMenuOpen}
           />
           <SidebarItem 
             icon={<Users />} 
             label="Clients" 
             active={activeTab === 'customers'} 
-            onClick={() => setActiveTab('customers')} 
-            collapsed={!isSidebarOpen}
+            onClick={() => { setActiveTab('customers'); setIsMobileMenuOpen(false); }} 
+            collapsed={!isSidebarOpen && !isMobileMenuOpen}
           />
           <SidebarItem 
             icon={<Package />} 
             label="Colis" 
             active={activeTab === 'parcels'} 
-            onClick={() => setActiveTab('parcels')} 
-            collapsed={!isSidebarOpen}
+            onClick={() => { setActiveTab('parcels'); setIsMobileMenuOpen(false); }} 
+            collapsed={!isSidebarOpen && !isMobileMenuOpen}
           />
           <SidebarItem 
             icon={<Megaphone />} 
             label="Publicités" 
             active={activeTab === 'ads'} 
-            onClick={() => setActiveTab('ads')} 
-            collapsed={!isSidebarOpen}
+            onClick={() => { setActiveTab('ads'); setIsMobileMenuOpen(false); }} 
+            collapsed={!isSidebarOpen && !isMobileMenuOpen}
           />
         </nav>
 
@@ -210,27 +244,35 @@ export function AdminDashboard() {
             className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-rose-500/10 text-rose-400 transition-all"
           >
             <LogOut className="w-6 h-6" />
-            {isSidebarOpen && <span className="font-bold">Déconnexion</span>}
+            {(isSidebarOpen || isMobileMenuOpen) && <span className="font-bold">Déconnexion</span>}
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white border-b border-slate-200 p-6 flex items-center justify-between">
-          <h2 className="text-2xl font-black text-slate-900 capitalize">{activeTab}</h2>
+      <main className="flex-1 flex flex-col overflow-hidden w-full">
+        <header className="bg-white border-b border-slate-200 p-4 sm:p-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="lg:hidden p-2 hover:bg-slate-100 rounded-xl transition-colors"
+            >
+              <Menu className="w-6 h-6 text-slate-600" />
+            </button>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 capitalize">{activeTab}</h2>
+          </div>
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
               <div className="font-bold text-slate-900">Admin Wassali</div>
               <div className="text-xs text-slate-400">Super Administrateur</div>
             </div>
-            <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center">
-              <Users className="w-6 h-6 text-slate-600" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-100 rounded-xl sm:rounded-2xl flex items-center justify-center">
+              <Users className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600" />
             </div>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8">
           {activeTab === 'visitors' && <VisitorsSection />}
           {activeTab === 'distributors' && <DistributorsSection />}
           {activeTab === 'customers' && <CustomersSection />}
@@ -275,9 +317,9 @@ function VisitorsSection() {
         <StatCard title="Utilisateurs Actifs" value={stats.active.toLocaleString()} icon={<Play className="text-amber-600" />} color="bg-amber-50" />
       </div>
 
-      <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100">
+      <div className="bg-white rounded-[2rem] p-4 sm:p-8 shadow-sm border border-slate-100">
         <h3 className="text-xl font-bold mb-6">Visites Quotidiennes</h3>
-        <div className="h-64 bg-slate-50 rounded-2xl flex items-end justify-between p-6 gap-2">
+        <div className="h-64 bg-slate-50 rounded-2xl flex items-end justify-between p-4 sm:p-6 gap-2">
           {[40, 60, 45, 90, 65, 80, 55].map((h, i) => (
             <div key={i} className="flex-1 bg-emerald-500 rounded-t-lg transition-all hover:bg-emerald-600" style={{ height: `${h}%` }}></div>
           ))}
@@ -291,24 +333,26 @@ function VisitorsSection() {
         <div className="p-6 border-b border-slate-100">
           <h3 className="text-xl font-bold">Visites Récentes</h3>
         </div>
-        <table className="w-full text-left">
-          <thead className="bg-slate-50 text-slate-400 text-xs font-bold uppercase tracking-widest">
-            <tr>
-              <th className="px-6 py-4">IP Address</th>
-              <th className="px-6 py-4">Page</th>
-              <th className="px-6 py-4">Date & Heure</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {[1, 2, 3, 4, 5].map((_, i) => (
-              <tr key={i} className="hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-4 font-mono text-sm text-slate-600">192.168.1.{10 + i}</td>
-                <td className="px-6 py-4"><span className="px-3 py-1 bg-slate-100 rounded-full text-xs font-bold">/tracking</span></td>
-                <td className="px-6 py-4 text-sm text-slate-400">Il y a {i + 2} minutes</td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left min-w-[600px]">
+            <thead className="bg-slate-50 text-slate-400 text-xs font-bold uppercase tracking-widest">
+              <tr>
+                <th className="px-6 py-4">IP Address</th>
+                <th className="px-6 py-4">Page</th>
+                <th className="px-6 py-4">Date & Heure</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {[1, 2, 3, 4, 5].map((_, i) => (
+                <tr key={i} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4 font-mono text-sm text-slate-600">192.168.1.{10 + i}</td>
+                  <td className="px-6 py-4"><span className="px-3 py-1 bg-slate-100 rounded-full text-xs font-bold">/tracking</span></td>
+                  <td className="px-6 py-4 text-sm text-slate-400">Il y a {i + 2} minutes</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -358,8 +402,8 @@ function DistributorsSection() {
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <div className="relative w-96">
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="relative w-full sm:w-96">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
           <input 
             type="text" 
@@ -369,57 +413,59 @@ function DistributorsSection() {
         </div>
         <button 
           onClick={() => setShowAddModal(true)}
-          className="bg-emerald-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-100"
+          className="w-full sm:w-auto bg-emerald-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-100"
         >
           <Plus className="w-5 h-5" /> Ajouter un livreur
         </button>
       </div>
 
       <div className="bg-white rounded-[2rem] overflow-hidden shadow-sm border border-slate-100">
-        <table className="w-full text-left">
-          <thead className="bg-slate-50 text-slate-400 text-xs font-bold uppercase tracking-widest">
-            <tr>
-              <th className="px-6 py-4">Livreur</th>
-              <th className="px-6 py-4">Contact</th>
-              <th className="px-6 py-4">Livraisons</th>
-              <th className="px-6 py-4">Statut</th>
-              <th className="px-6 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {distributors.map((d) => (
-              <tr key={d.uid} className="hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-4">
-                  <div className="font-bold text-slate-900">{d.name || d.email.split('@')[0]}</div>
-                  <div className="text-xs text-slate-400">{d.city || 'Non spécifié'} • {d.vehicleType || 'Moto'}</div>
-                </td>
-                <td className="px-6 py-4 text-sm text-slate-600">{d.phone || 'N/A'}</td>
-                <td className="px-6 py-4">
-                  <span className="font-bold text-emerald-600">{d.deliveriesCount}</span>
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                    d.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
-                  }`}>
-                    {d.status === 'active' ? 'En ligne' : 'Hors ligne'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-2">
-                    <button className="p-2 hover:bg-blue-50 text-blue-600 rounded-xl transition-colors"><Edit className="w-4 h-4" /></button>
-                    <button onClick={() => handleDelete(d.uid)} className="p-2 hover:bg-rose-50 text-rose-600 rounded-xl transition-colors"><Trash2 className="w-4 h-4" /></button>
-                  </div>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left min-w-[800px]">
+            <thead className="bg-slate-50 text-slate-400 text-xs font-bold uppercase tracking-widest">
+              <tr>
+                <th className="px-6 py-4">Livreur</th>
+                <th className="px-6 py-4">Contact</th>
+                <th className="px-6 py-4">Livraisons</th>
+                <th className="px-6 py-4">Statut</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {distributors.map((d) => (
+                <tr key={d.uid} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="font-bold text-slate-900">{d.name || d.email.split('@')[0]}</div>
+                    <div className="text-xs text-slate-400">{d.city || 'Non spécifié'} • {d.vehicleType || 'Moto'}</div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600">{d.phone || 'N/A'}</td>
+                  <td className="px-6 py-4">
+                    <span className="font-bold text-emerald-600">{d.deliveriesCount}</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                      d.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      {d.status === 'active' ? 'En ligne' : 'Hors ligne'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex justify-end gap-2">
+                      <button className="p-2 hover:bg-blue-50 text-blue-600 rounded-xl transition-colors"><Edit className="w-4 h-4" /></button>
+                      <button onClick={() => handleDelete(d.uid)} className="p-2 hover:bg-rose-50 text-rose-600 rounded-xl transition-colors"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {showAddModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-6">
-          <div className="bg-white rounded-[2.5rem] p-10 w-full max-w-lg shadow-2xl">
-            <h3 className="text-2xl font-black mb-6">Nouveau Livreur</h3>
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-6">
+          <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl sm:text-2xl font-black mb-6">Nouveau Livreur</h3>
             <form onSubmit={handleAdd} className="space-y-4">
               <input 
                 type="text" 
@@ -489,7 +535,7 @@ function CustomersSection() {
 
   return (
     <div className="space-y-8">
-      <div className="relative w-96">
+      <div className="relative w-full sm:w-96">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
         <input 
           type="text" 
@@ -501,31 +547,33 @@ function CustomersSection() {
       </div>
 
       <div className="bg-white rounded-[2rem] overflow-hidden shadow-sm border border-slate-100">
-        <table className="w-full text-left">
-          <thead className="bg-slate-50 text-slate-400 text-xs font-bold uppercase tracking-widest">
-            <tr>
-              <th className="px-6 py-4">Client</th>
-              <th className="px-6 py-4">Contact</th>
-              <th className="px-6 py-4">Adresse</th>
-              <th className="px-6 py-4">Colis Envoyés</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {filtered.map((c) => (
-              <tr key={c.uid} className="hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-4">
-                  <div className="font-bold text-slate-900">{c.name || c.email.split('@')[0]}</div>
-                  <div className="text-xs text-slate-400">{c.email}</div>
-                </td>
-                <td className="px-6 py-4 text-sm text-slate-600">{c.phone || 'N/A'}</td>
-                <td className="px-6 py-4 text-sm text-slate-400">{c.address || 'Non renseignée'}</td>
-                <td className="px-6 py-4">
-                  <span className="font-bold text-blue-600">{c.parcelsSent}</span>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left min-w-[800px]">
+            <thead className="bg-slate-50 text-slate-400 text-xs font-bold uppercase tracking-widest">
+              <tr>
+                <th className="px-6 py-4">Client</th>
+                <th className="px-6 py-4">Contact</th>
+                <th className="px-6 py-4">Adresse</th>
+                <th className="px-6 py-4">Colis Envoyés</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filtered.map((c) => (
+                <tr key={c.uid} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="font-bold text-slate-900">{c.name || c.email.split('@')[0]}</div>
+                    <div className="text-xs text-slate-400">{c.email}</div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600">{c.phone || 'N/A'}</td>
+                  <td className="px-6 py-4 text-sm text-slate-400">{c.address || 'Non renseignée'}</td>
+                  <td className="px-6 py-4">
+                    <span className="font-bold text-blue-600">{c.parcelsSent}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -561,61 +609,63 @@ function ParcelsSection() {
   return (
     <div className="space-y-8">
       <div className="bg-white rounded-[2rem] overflow-hidden shadow-sm border border-slate-100">
-        <table className="w-full text-left">
-          <thead className="bg-slate-50 text-slate-400 text-xs font-bold uppercase tracking-widest">
-            <tr>
-              <th className="px-6 py-4">ID Colis</th>
-              <th className="px-6 py-4">Expéditeur / Destinataire</th>
-              <th className="px-6 py-4">Destination</th>
-              <th className="px-6 py-4">Livreur</th>
-              <th className="px-6 py-4">Statut</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {parcels.map((p) => (
-              <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-4 font-mono text-xs font-bold text-slate-400">#{p.id.slice(-6).toUpperCase()}</td>
-                <td className="px-6 py-4">
-                  <div className="text-sm font-bold text-slate-900">De: {p.senderName || 'Client'}</div>
-                  <div className="text-xs text-slate-500">À: {p.receiverName} ({p.receiverPhone})</div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="text-sm text-slate-600">{p.destinationArea}</div>
-                  <div className="text-[10px] text-slate-400 truncate max-w-[150px]">{p.receiverAddress}</div>
-                </td>
-                <td className="px-6 py-4">
-                  <select 
-                    className="bg-slate-50 border-none rounded-xl text-xs py-2 px-3 focus:ring-2 focus:ring-emerald-500"
-                    value={p.distributorAssigned || ''}
-                    onChange={e => assignDriver(p.id, e.target.value)}
-                  >
-                    <option value="">Non assigné</option>
-                    {drivers.map(d => (
-                      <option key={d.uid} value={d.uid}>{d.name || d.email.split('@')[0]}</option>
-                    ))}
-                  </select>
-                </td>
-                <td className="px-6 py-4">
-                  <select 
-                    className={`border-none rounded-xl text-[10px] font-black uppercase tracking-widest py-2 px-3 focus:ring-2 focus:ring-emerald-500 ${
-                      p.status === 'delivered' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'
-                    }`}
-                    value={p.status}
-                    onChange={e => updateStatus(p.id, e.target.value)}
-                  >
-                    <option value="pending">En attente</option>
-                    <option value="collected">Collecté</option>
-                    <option value="in-transit">En transit</option>
-                    <option value="out-for-delivery">En cours</option>
-                    <option value="delivered">Livré</option>
-                    <option value="returned">Retourné</option>
-                    <option value="cancelled">Annulé</option>
-                  </select>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left min-w-[900px]">
+            <thead className="bg-slate-50 text-slate-400 text-xs font-bold uppercase tracking-widest">
+              <tr>
+                <th className="px-6 py-4">ID Colis</th>
+                <th className="px-6 py-4">Expéditeur / Destinataire</th>
+                <th className="px-6 py-4">Destination</th>
+                <th className="px-6 py-4">Livreur</th>
+                <th className="px-6 py-4">Statut</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {parcels.map((p) => (
+                <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4 font-mono text-xs font-bold text-slate-400">#{p.id.slice(-6).toUpperCase()}</td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm font-bold text-slate-900">De: {p.senderName || 'Client'}</div>
+                    <div className="text-xs text-slate-500">À: {p.receiverName} ({p.receiverPhone})</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-slate-600">{p.destinationArea}</div>
+                    <div className="text-[10px] text-slate-400 truncate max-w-[150px]">{p.receiverAddress}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <select 
+                      className="bg-slate-50 border-none rounded-xl text-xs py-2 px-3 focus:ring-2 focus:ring-emerald-500"
+                      value={p.distributorAssigned || ''}
+                      onChange={e => assignDriver(p.id, e.target.value)}
+                    >
+                      <option value="">Non assigné</option>
+                      {drivers.map(d => (
+                        <option key={d.uid} value={d.uid}>{d.name || d.email.split('@')[0]}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="px-6 py-4">
+                    <select 
+                      className={`border-none rounded-xl text-[10px] font-black uppercase tracking-widest py-2 px-3 focus:ring-2 focus:ring-emerald-500 ${
+                        p.status === 'delivered' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'
+                      }`}
+                      value={p.status}
+                      onChange={e => updateStatus(p.id, e.target.value)}
+                    >
+                      <option value="pending">En attente</option>
+                      <option value="collected">Collecté</option>
+                      <option value="in-transit">En transit</option>
+                      <option value="out-for-delivery">En cours</option>
+                      <option value="delivered">Livré</option>
+                      <option value="returned">Retourné</option>
+                      <option value="cancelled">Annulé</option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -679,14 +729,14 @@ function AdsSection() {
       />
 
       {preview && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-10">
-          <div className="bg-white rounded-[2.5rem] w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden shadow-2xl">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="text-xl font-bold">Aperçu Publicité</h3>
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-10">
+          <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] w-full max-w-4xl h-[90vh] sm:h-[80vh] flex flex-col overflow-hidden shadow-2xl">
+            <div className="p-4 sm:p-6 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="text-lg sm:text-xl font-bold">Aperçu Publicité</h3>
               <button onClick={() => setPreview(null)} className="text-slate-400 hover:text-slate-600 font-bold">Fermer</button>
             </div>
-            <div className="flex-1 overflow-auto p-10 bg-slate-50">
-              <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 min-h-full" dangerouslySetInnerHTML={{ __html: ads[preview] }} />
+            <div className="flex-1 overflow-auto p-4 sm:p-10 bg-slate-50">
+              <div className="bg-white p-4 sm:p-8 rounded-2xl shadow-sm border border-slate-100 min-h-full" dangerouslySetInnerHTML={{ __html: ads[preview] }} />
             </div>
           </div>
         </div>
@@ -697,7 +747,7 @@ function AdsSection() {
 
 function AdEditor({ title, value, onChange, onSave, onPreview }: any) {
   return (
-    <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100 space-y-4">
+    <div className="bg-white rounded-[2rem] p-6 sm:p-8 shadow-sm border border-slate-100 space-y-4">
       <h3 className="text-lg font-bold text-slate-900">{title}</h3>
       <textarea 
         className="w-full bg-slate-50 border-none rounded-2xl p-6 font-mono text-sm min-h-[200px] focus:ring-2 focus:ring-emerald-500"
@@ -725,13 +775,13 @@ function AdEditor({ title, value, onChange, onSave, onPreview }: any) {
 
 function StatCard({ title, value, icon, color }: any) {
   return (
-    <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100 flex items-center gap-6">
-      <div className={`w-16 h-16 ${color} rounded-2xl flex items-center justify-center shrink-0`}>
+    <div className="bg-white rounded-[2rem] p-6 sm:p-8 shadow-sm border border-slate-100 flex items-center gap-4 sm:gap-6">
+      <div className={`w-12 h-12 sm:w-16 sm:h-16 ${color} rounded-2xl flex items-center justify-center shrink-0`}>
         {icon}
       </div>
       <div>
-        <div className="text-sm font-bold text-slate-400 uppercase tracking-widest">{title}</div>
-        <div className="text-3xl font-black text-slate-900 mt-1">{value}</div>
+        <div className="text-[10px] sm:text-sm font-bold text-slate-400 uppercase tracking-widest">{title}</div>
+        <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">{value}</div>
       </div>
     </div>
   );

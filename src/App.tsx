@@ -367,14 +367,14 @@ function MainApp() {
 
   // --- Render Helpers ---
   const Header = ({ title, showBack = true }: { title: string, showBack?: boolean }) => (
-    <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-4 flex items-center justify-between">
-      <div className="flex items-center gap-4">
+    <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 sm:px-6 py-4 flex items-center justify-between">
+      <div className="flex items-center gap-3 sm:gap-4">
         {showBack && (
           <button onClick={() => setPage('home')} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-            <ChevronLeft className="w-6 h-6 text-slate-600" />
+            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600" />
           </button>
         )}
-        <h1 className="text-xl font-black tracking-tighter text-slate-900">{title}</h1>
+        <h1 className="text-lg sm:text-xl font-black tracking-tighter text-slate-900">{title}</h1>
       </div>
       <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-rose-500 transition-colors">
         <LogOut className="w-5 h-5" />
@@ -403,11 +403,11 @@ function MainApp() {
           >
             {/* Top Right Buttons (only if auth is shown) */}
             {showAuth && !user && (
-              <div className="absolute top-6 right-6 flex gap-3 z-10">
+              <div className="absolute top-4 right-4 sm:top-6 sm:right-6 flex gap-2 sm:gap-3 z-10">
                 <button 
                   onClick={() => setIsLogin(true)}
                   className={cn(
-                    "px-6 py-2 rounded-full text-sm font-bold transition-all",
+                    "px-4 sm:px-6 py-2 rounded-full text-xs sm:text-sm font-bold transition-all",
                     isLogin ? "bg-emerald-600 text-white shadow-lg shadow-emerald-100" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                   )}
                 >
@@ -416,7 +416,7 @@ function MainApp() {
                 <button 
                   onClick={() => setIsLogin(false)}
                   className={cn(
-                    "px-6 py-2 rounded-full text-sm font-bold transition-all",
+                    "px-4 sm:px-6 py-2 rounded-full text-xs sm:text-sm font-bold transition-all",
                     !isLogin ? "bg-emerald-600 text-white shadow-lg shadow-emerald-100" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                   )}
                 >
@@ -425,21 +425,21 @@ function MainApp() {
               </div>
             )}
 
-            <div className="flex-1 flex flex-col items-center justify-center p-6">
+            <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6">
               {!showAuth && !user ? (
-                <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-                  <div className="text-left space-y-6">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold uppercase tracking-widest">
+                <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center py-12 md:py-0">
+                  <div className="text-left space-y-6 order-2 md:order-1">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-widest">
                       <Truck className="w-4 h-4" /> Livraison Premium & Express
                     </div>
-                    <h1 className="text-7xl font-black tracking-tighter text-slate-900 leading-none">
+                    <h1 className="text-5xl sm:text-6xl md:text-7xl font-black tracking-tighter text-slate-900 leading-none">
                       Wassali
                     </h1>
-                    <p className="text-slate-500 text-xl leading-relaxed max-w-md">
+                    <p className="text-slate-500 text-lg sm:text-xl leading-relaxed max-w-md">
                       L'excellence de la livraison à votre portée. Connectez-vous avec les meilleurs livreurs pour un service rapide, sécurisé et irréprochable.
                     </p>
                     
-                    <div className="grid grid-cols-2 gap-4 pt-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
                       <button 
                         onClick={() => { setSelectedRole('client'); setShowAuth(true); setIsLogin(false); }}
                         className="group bg-slate-900 text-white p-6 rounded-[2rem] hover:bg-slate-800 transition-all text-left shadow-2xl shadow-slate-200 border border-white/10"
@@ -471,33 +471,33 @@ function MainApp() {
                     </button>
                   </div>
 
-                  <div className="relative">
+                  <div className="relative order-1 md:order-2">
                     <div className="absolute -inset-4 bg-emerald-100 rounded-[3rem] -rotate-3 scale-95 opacity-50 blur-2xl"></div>
                     <img 
                       src="https://images.unsplash.com/photo-1566576721346-d4a3b4eaeb55?auto=format&fit=crop&q=80&w=1000" 
                       alt="Happy Customer Delivery" 
-                      className="relative rounded-[3rem] shadow-2xl w-full aspect-[4/5] object-cover border-8 border-white"
+                      className="relative rounded-[2rem] sm:rounded-[3rem] shadow-2xl w-full aspect-[4/5] object-cover border-4 sm:border-8 border-white"
                       referrerPolicy="no-referrer"
                     />
-                    <div className="absolute -bottom-6 -right-6 bg-white p-6 rounded-3xl shadow-2xl border border-slate-50 flex items-center gap-4 animate-bounce">
-                      <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center">
-                        <CheckCircle className="w-6 h-6 text-emerald-600" />
+                    <div className="absolute -bottom-4 -right-4 sm:-bottom-6 sm:-right-6 bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-50 flex items-center gap-3 sm:gap-4 animate-bounce">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-100 rounded-xl sm:rounded-2xl flex items-center justify-center">
+                        <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600" />
                       </div>
                       <div>
-                        <div className="font-black text-slate-900">Satisfaction</div>
-                        <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Garantie 100%</div>
+                        <div className="font-black text-sm sm:text-base text-slate-900">Satisfaction</div>
+                        <div className="text-[8px] sm:text-[10px] text-slate-400 uppercase font-bold tracking-widest">Garantie 100%</div>
                       </div>
                     </div>
                     
-                    <div className="absolute -top-6 -left-6 bg-white p-4 rounded-2xl shadow-xl border border-slate-50 flex items-center gap-3">
+                    <div className="absolute -top-4 -left-4 sm:-top-6 sm:-left-6 bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-xl border border-slate-50 flex items-center gap-2 sm:gap-3">
                       <div className="flex -space-x-2">
                         {[1,2,3].map(i => (
-                          <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-slate-200 overflow-hidden">
+                          <div key={i} className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 border-white bg-slate-200 overflow-hidden">
                             <img src={`https://i.pravatar.cc/100?img=${i+10}`} alt="User" />
                           </div>
                         ))}
                       </div>
-                      <div className="text-[10px] font-bold text-slate-600">+2k Clients Heureux</div>
+                      <div className="text-[8px] sm:text-[10px] font-bold text-slate-600">+2k Clients Heureux</div>
                     </div>
                   </div>
                 </div>
@@ -509,12 +509,12 @@ function MainApp() {
                   >
                     <ChevronLeft className="w-4 h-4" /> Retour à l'accueil
                   </button>
-                  <div className="bg-white rounded-[2.5rem] p-8 shadow-2xl border border-slate-100">
-                    <div className="flex flex-col items-center mb-8">
-                      <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mb-4">
-                        {selectedRole === 'client' ? <UserIcon className="w-8 h-8 text-emerald-600" /> : <Truck className="w-8 h-8 text-emerald-600" />}
+                  <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 shadow-2xl border border-slate-100">
+                    <div className="flex flex-col items-center mb-6 sm:mb-8">
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mb-4">
+                        {selectedRole === 'client' ? <UserIcon className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600" /> : <Truck className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600" />}
                       </div>
-                      <h2 className="text-2xl font-black tracking-tight">
+                      <h2 className="text-xl sm:text-2xl font-black tracking-tight">
                         {isLogin ? 'Connexion' : 'Inscription'} {selectedRole === 'client' ? 'Client' : 'Livreur'}
                       </h2>
                     </div>
@@ -634,7 +634,7 @@ function MainApp() {
           >
             <Header title="Nouveau Colis" />
             <AdSlot html={ads?.products} />
-            <div className="p-6 max-w-md mx-auto w-full">
+            <div className="p-4 sm:p-6 max-w-md mx-auto w-full">
               <form 
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -647,7 +647,7 @@ function MainApp() {
                     destinationArea: fd.get('area') as string,
                   });
                 }}
-                className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 space-y-4"
+                className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-100 space-y-4"
               >
                 <div className="p-4 bg-blue-50 rounded-2xl text-xs text-blue-700 flex gap-3 items-start">
                   <ShieldCheck className="w-5 h-5 shrink-0" />
@@ -681,12 +681,12 @@ function MainApp() {
           >
             <Header title="Mes Colis" />
             <AdSlot html={ads?.tracking} />
-            <div className="p-6 max-w-md mx-auto w-full space-y-4">
+            <div className="p-4 sm:p-6 max-w-md mx-auto w-full space-y-4">
               {parcels.length === 0 ? (
                 <div className="text-center py-20 text-slate-400">Aucun colis trouvé.</div>
               ) : (
                 parcels.map(p => (
-                  <div key={p.id} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                  <div key={p.id} className="bg-white p-4 sm:p-6 rounded-3xl shadow-sm border border-slate-100">
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h3 className="font-bold text-lg">{p.deliveryCompany}</h3>
@@ -719,9 +719,9 @@ function MainApp() {
           >
             <Header title="Colis Disponibles" />
             <AdSlot html={ads?.products} />
-            <div className="p-6 max-w-md mx-auto w-full space-y-4">
+            <div className="p-4 sm:p-6 max-w-md mx-auto w-full space-y-4">
               {!user && (
-                <div className="p-6 bg-blue-600 rounded-3xl text-white shadow-lg shadow-blue-100 mb-4">
+                <div className="p-4 sm:p-6 bg-blue-600 rounded-3xl text-white shadow-lg shadow-blue-100 mb-4">
                   <h3 className="font-bold text-lg mb-2">Prêt à livrer ?</h3>
                   <p className="text-blue-100 text-sm mb-4">Connectez-vous pour accepter des colis et commencer à gagner de l'argent.</p>
                   <button 
@@ -742,7 +742,7 @@ function MainApp() {
                 <div className="text-center py-20 text-slate-400">Aucun colis disponible pour le moment.</div>
               ) : (
                 parcels.map(p => (
-                  <div key={p.id} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                  <div key={p.id} className="bg-white p-4 sm:p-6 rounded-3xl shadow-sm border border-slate-100">
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h3 className="font-bold text-lg">{p.deliveryCompany}</h3>
@@ -791,12 +791,12 @@ function MainApp() {
           >
             <Header title="Mes Livraisons" />
             <AdSlot html={ads?.tracking} />
-            <div className="p-6 max-w-md mx-auto w-full space-y-4">
+            <div className="p-4 sm:p-6 max-w-md mx-auto w-full space-y-4">
               {driverParcels.length === 0 ? (
                 <div className="text-center py-20 text-slate-400">Vous n'avez pas encore accepté de colis.</div>
               ) : (
                 driverParcels.map(p => (
-                  <div key={p.id} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                  <div key={p.id} className="bg-white p-4 sm:p-6 rounded-3xl shadow-sm border border-slate-100">
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h3 className="font-bold text-lg text-blue-700">{p.deliveryCompany}</h3>
