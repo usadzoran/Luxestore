@@ -412,13 +412,32 @@ function DistributorsSection() {
 
   useEffect(() => {
     const q = query(collection(db, 'users'), where('role', '==', 'driver'));
-    return onSnapshot(q, (snapshot) => {
-      setDistributors(snapshot.docs.map(doc => ({ 
-        uid: doc.id, 
-        ...doc.data(),
-        deliveriesCount: 0 // In a real app, we'd count their delivered parcels
-      } as Distributor)));
+    const pq = collection(db, 'parcels');
+
+    let driversList: any[] = [];
+    let parcelsList: any[] = [];
+
+    const updateDistributors = () => {
+      setDistributors(driversList.map(d => ({
+        ...d,
+        deliveriesCount: parcelsList.filter(p => p.deliveryUID === d.uid && p.status === 'delivered').length
+      })));
+    };
+
+    const unsubUsers = onSnapshot(q, (snapshot) => {
+      driversList = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+      updateDistributors();
     });
+
+    const unsubParcels = onSnapshot(pq, (snapshot) => {
+      parcelsList = snapshot.docs.map(doc => doc.data());
+      updateDistributors();
+    });
+
+    return () => {
+      unsubUsers();
+      unsubParcels();
+    };
   }, []);
 
   const handleAdd = async (e: React.FormEvent) => {
@@ -560,13 +579,32 @@ function CustomersSection() {
 
   useEffect(() => {
     const q = query(collection(db, 'users'), where('role', '==', 'client'));
-    return onSnapshot(q, (snapshot) => {
-      setCustomers(snapshot.docs.map(doc => ({ 
-        uid: doc.id, 
-        ...doc.data(),
-        parcelsSent: 0
-      } as Customer)));
+    const pq = collection(db, 'parcels');
+
+    let clientsList: any[] = [];
+    let parcelsList: any[] = [];
+
+    const updateCustomers = () => {
+      setCustomers(clientsList.map(c => ({
+        ...c,
+        parcelsSent: parcelsList.filter(p => p.ownerId === c.uid).length
+      })));
+    };
+
+    const unsubUsers = onSnapshot(q, (snapshot) => {
+      clientsList = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+      updateCustomers();
     });
+
+    const unsubParcels = onSnapshot(pq, (snapshot) => {
+      parcelsList = snapshot.docs.map(doc => doc.data());
+      updateCustomers();
+    });
+
+    return () => {
+      unsubUsers();
+      unsubParcels();
+    };
   }, []);
 
   const filtered = customers.filter(c => 
@@ -676,7 +714,7 @@ function ParcelsSection() {
                   <td className="px-6 py-4">
                     <select 
                       className="bg-slate-50 border-none rounded-xl text-xs py-2 px-3 focus:ring-2 focus:ring-emerald-500"
-                      value={p.distributorAssigned || ''}
+                      value={p.deliveryUID || ''}
                       onChange={e => assignDriver(p.id, e.target.value)}
                     >
                       <option value="">Non assigné</option>

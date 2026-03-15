@@ -108,6 +108,9 @@ interface UserProfile {
   uid: string;
   email: string;
   role: 'client' | 'driver';
+  name?: string;
+  phone?: string;
+  address?: string;
 }
 
 interface AdsConfig {
@@ -334,6 +337,7 @@ function MainApp() {
       await addDoc(collection(db, 'parcels'), {
         ...data,
         ownerId: user.uid,
+        senderName: profile?.name || user.email?.split('@')[0] || 'Client',
         status: 'pending',
         createdAt: Date.now()
       });
