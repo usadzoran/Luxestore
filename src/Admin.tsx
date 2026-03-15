@@ -42,6 +42,40 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string;
+    email?: string | null;
+    emailVerified?: boolean;
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+}
+
 // --- Types ---
 interface VisitorStat {
   id: string;
@@ -339,11 +373,11 @@ function VisitorsSection() {
     const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
       const drivers = snap.docs.filter(d => d.data().role === 'driver').length;
       setStats(prev => ({ ...prev, total: snap.size, drivers }));
-    });
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'users'));
 
     const unsubParcels = onSnapshot(collection(db, 'parcels'), (snap) => {
       setStats(prev => ({ ...prev, parcels: snap.size }));
-    });
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'parcels'));
 
     // Recent activities (Users and Parcels)
     const usersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(5));
@@ -361,7 +395,7 @@ function VisitorsSection() {
         const filtered = prev.filter(a => a.type !== 'user');
         return [...filtered, ...newUsers].sort((a, b) => b.time - a.time).slice(0, 10);
       });
-    });
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'users'));
 
     const unsubRecentParcels = onSnapshot(parcelsQuery, (snap) => {
       const newParcels = snap.docs.map(doc => ({
@@ -375,7 +409,7 @@ function VisitorsSection() {
         const filtered = prev.filter(a => a.type !== 'parcel');
         return [...filtered, ...newParcels].sort((a, b) => b.time - a.time).slice(0, 10);
       });
-    });
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'parcels'));
 
     return () => {
       unsubUsers();
@@ -484,12 +518,12 @@ function DistributorsSection() {
     const unsubUsers = onSnapshot(q, (snapshot) => {
       driversList = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
       updateDistributors();
-    });
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'users'));
 
     const unsubParcels = onSnapshot(pq, (snapshot) => {
       parcelsList = snapshot.docs.map(doc => doc.data());
       updateDistributors();
-    });
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'parcels'));
 
     return () => {
       unsubUsers();
@@ -656,12 +690,12 @@ function CustomersSection() {
     const unsubUsers = onSnapshot(q, (snapshot) => {
       clientsList = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
       updateCustomers();
-    });
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'users'));
 
     const unsubParcels = onSnapshot(pq, (snapshot) => {
       parcelsList = snapshot.docs.map(doc => doc.data());
       updateCustomers();
-    });
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'parcels'));
 
     return () => {
       unsubUsers();
@@ -734,11 +768,11 @@ function ParcelsSection() {
     
     const unsubParcels = onSnapshot(q, (snapshot) => {
       setParcels(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
-    });
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'parcels'));
     
     const unsubDrivers = onSnapshot(dq, (snapshot) => {
       setDrivers(snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as any)));
-    });
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'users'));
 
     return () => { unsubParcels(); unsubDrivers(); };
   }, []);

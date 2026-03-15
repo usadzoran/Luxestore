@@ -163,8 +163,24 @@ function AdminLoginWrapper() {
 }
 
 function AdminDashboardWrapper() {
-  const isAdmin = localStorage.getItem('admin_auth') === 'true';
-  if (!isAdmin) return <Navigate to="/admin-login" />;
+  const [loading, setLoading] = useState(true);
+  const [isAuth, setIsAuth] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsAuth(!!user && localStorage.getItem('admin_auth') === 'true');
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-900">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+    </div>
+  );
+
+  if (!isAuth) return <Navigate to="/admin-login" />;
   return <AdminDashboard />;
 }
 
