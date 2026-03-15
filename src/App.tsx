@@ -157,9 +157,24 @@ export default function App() {
 }
 
 function AdminLoginWrapper() {
-  const [isAdmin, setIsAdmin] = useState(localStorage.getItem('admin_auth') === 'true');
-  if (isAdmin) return <Navigate to="/secure-admin-panel" />;
-  return <AdminLogin onLogin={() => setIsAdmin(true)} />;
+  const [loading, setLoading] = useState(true);
+  const [isAuth, setIsAuth] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsAuth(!!user && localStorage.getItem('admin_auth') === 'true');
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  if (loading) return null;
+  if (isAuth) return <Navigate to="/secure-admin-panel" />;
+  
+  return <AdminLogin onLogin={() => {
+    localStorage.setItem('admin_auth', 'true');
+    setIsAuth(true);
+  }} />;
 }
 
 function AdminDashboardWrapper() {

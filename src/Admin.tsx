@@ -32,7 +32,7 @@ import {
   getDocs,
   limit
 } from 'firebase/firestore';
-import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
 
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -138,7 +138,23 @@ export function AdminLogin({ onLogin }: { onLogin: () => void }) {
     setError('');
     try {
       // Use Firebase Auth for admin login
-      await signInWithEmailAndPassword(auth, username, password);
+      try {
+        await signInWithEmailAndPassword(auth, username, password);
+      } catch (err: any) {
+        // If user doesn't exist and it's the admin email, try creating it
+        if ((err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') && username === 'wahablila31000@gmail.com') {
+          await createUserWithEmailAndPassword(auth, username, password);
+          // Also create a user document in Firestore with admin role
+          await setDoc(doc(db, 'users', auth.currentUser!.uid), {
+            email: username,
+            role: 'admin',
+            createdAt: Date.now(),
+            name: 'Super Admin'
+          });
+        } else {
+          throw err;
+        }
+      }
       localStorage.setItem('admin_auth', 'true');
       onLogin();
     } catch (err: any) {
