@@ -180,7 +180,7 @@ function AdminDashboardWrapper() {
     </div>
   );
 
-  if (!isAuth) return <Navigate to="/admin-login" />;
+  if (!isAuth) return <Navigate to="/wassali-admin" />;
   return <AdminDashboard />;
 }
 

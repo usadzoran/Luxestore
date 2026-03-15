@@ -228,7 +228,7 @@ export function AdminDashboard() {
   const handleLogout = async () => {
     await signOut(auth);
     localStorage.removeItem('admin_auth');
-    window.location.hash = '/admin-login';
+    window.location.hash = '/wassali-admin';
   };
 
   return (
