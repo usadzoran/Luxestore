@@ -152,7 +152,7 @@ export function AdminDashboard() {
 
   const handleLogout = () => {
     localStorage.removeItem('admin_auth');
-    window.location.href = '/admin-login';
+    window.location.hash = '/admin-login';
   };
 
   return (

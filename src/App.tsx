@@ -20,7 +20,7 @@ import {
   CheckCircle,
   LayoutDashboard
 } from 'lucide-react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AdminLogin, AdminDashboard } from './Admin';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -141,14 +141,14 @@ function AdSlot({ html }: { html?: string }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Routes>
         <Route path="/admin-login" element={<AdminLoginWrapper />} />
         <Route path="/wassali-admin" element={<AdminLoginWrapper />} />
         <Route path="/secure-admin-panel" element={<AdminDashboardWrapper />} />
         <Route path="*" element={<MainApp />} />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 
