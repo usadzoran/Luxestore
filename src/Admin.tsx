@@ -16,7 +16,7 @@ import {
   Play,
   Menu
 } from 'lucide-react';
-import { db } from './firebase';
+import { db, auth } from './firebase';
 import { 
   collection, 
   onSnapshot, 
@@ -28,8 +28,10 @@ import {
   deleteDoc,
   addDoc,
   setDoc,
-  getDoc
+  getDoc,
+  getDocs
 } from 'firebase/firestore';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -93,14 +95,26 @@ export function AdminLogin({ onLogin }: { onLogin: () => void }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === 'wassali@Gmail.com' && password === 'vampirewahab31') {
+    setLoading(true);
+    setError('');
+    try {
+      // Use Firebase Auth for admin login
+      await signInWithEmailAndPassword(auth, username, password);
       localStorage.setItem('admin_auth', 'true');
       onLogin();
-    } else {
-      setError('Identifiants invalides');
+    } catch (err: any) {
+      console.error('Admin login error:', err);
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setError('Email ou mot de passe incorrect');
+      } else {
+        setError('Erreur de connexion: ' + err.message);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -112,7 +126,7 @@ export function AdminLogin({ onLogin }: { onLogin: () => void }) {
             <LayoutDashboard className="w-8 h-8 text-emerald-600" />
           </div>
           <h1 className="text-3xl font-black tracking-tight text-slate-900">Wassali Admin</h1>
-          <p className="text-slate-500 mt-2">Connectez-vous pour gérer la plateforme</p>
+          <p className="text-slate-500 mt-2 text-center">Connectez-vous pour gérer la plateforme</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -124,12 +138,13 @@ export function AdminLogin({ onLogin }: { onLogin: () => void }) {
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-2 ml-1">Email</label>
             <input 
-              type="text" 
+              type="email" 
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="w-full bg-slate-50 border-none rounded-2xl py-4 px-6 focus:ring-2 focus:ring-emerald-500"
               placeholder="wassali@Gmail.com"
               required
+              disabled={loading}
             />
           </div>
           <div>
@@ -141,12 +156,15 @@ export function AdminLogin({ onLogin }: { onLogin: () => void }) {
               className="w-full bg-slate-50 border-none rounded-2xl py-4 px-6 focus:ring-2 focus:ring-emerald-500"
               placeholder="••••••••"
               required
+              disabled={loading}
             />
           </div>
           <button 
             type="submit" 
-            className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold text-lg hover:bg-slate-800 transition-all shadow-xl shadow-slate-200"
+            disabled={loading}
+            className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold text-lg hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 disabled:opacity-50 flex items-center justify-center gap-2"
           >
+            {loading && <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
             Se connecter
           </button>
         </form>
@@ -172,7 +190,8 @@ export function AdminDashboard() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut(auth);
     localStorage.removeItem('admin_auth');
     window.location.hash = '/admin-login';
   };
@@ -262,6 +281,10 @@ export function AdminDashboard() {
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 capitalize">{activeTab}</h2>
           </div>
           <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-bold uppercase tracking-widest animate-pulse">
+              <div className="w-1.5 h-1.5 bg-emerald-600 rounded-full"></div>
+              Synchronisation Temps Réel
+            </div>
             <div className="text-right hidden sm:block">
               <div className="font-bold text-slate-900">Admin Wassali</div>
               <div className="text-xs text-slate-400">Super Administrateur</div>
@@ -304,17 +327,35 @@ function SidebarItem({ icon, label, active, onClick, collapsed }: any) {
 
 function VisitorsSection() {
   const [stats, setStats] = useState({
-    total: 12450,
-    today: 450,
-    active: 24
+    total: 0,
+    drivers: 0,
+    parcels: 0
   });
+
+  useEffect(() => {
+    // Real-time stats from Firestore
+    const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
+      const drivers = snap.docs.filter(d => d.data().role === 'driver').length;
+      const clients = snap.docs.filter(d => d.data().role === 'client').length;
+      setStats(prev => ({ ...prev, total: snap.size, drivers }));
+    });
+
+    const unsubParcels = onSnapshot(collection(db, 'parcels'), (snap) => {
+      setStats(prev => ({ ...prev, parcels: snap.size }));
+    });
+
+    return () => {
+      unsubUsers();
+      unsubParcels();
+    };
+  }, []);
 
   return (
     <div className="space-y-8">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard title="Total Visiteurs" value={stats.total.toLocaleString()} icon={<Users className="text-blue-600" />} color="bg-blue-50" />
-        <StatCard title="Visiteurs Aujourd'hui" value={stats.today.toLocaleString()} icon={<BarChart3 className="text-emerald-600" />} color="bg-emerald-50" />
-        <StatCard title="Utilisateurs Actifs" value={stats.active.toLocaleString()} icon={<Play className="text-amber-600" />} color="bg-amber-50" />
+        <StatCard title="Total Utilisateurs" value={stats.total.toLocaleString()} icon={<Users className="text-blue-600" />} color="bg-blue-50" />
+        <StatCard title="Livreurs Actifs" value={stats.drivers.toLocaleString()} icon={<Truck className="text-emerald-600" />} color="bg-emerald-50" />
+        <StatCard title="Total Colis" value={stats.parcels.toLocaleString()} icon={<Package className="text-amber-600" />} color="bg-amber-50" />
       </div>
 
       <div className="bg-white rounded-[2rem] p-4 sm:p-8 shadow-sm border border-slate-100">
@@ -681,14 +722,13 @@ function AdsSection() {
   const [preview, setPreview] = useState<keyof AdsConfig | null>(null);
 
   useEffect(() => {
-    const fetchAds = async () => {
-      const docRef = doc(db, 'config', 'ads');
-      const docSnap = await getDoc(docRef);
+    const docRef = doc(db, 'config', 'ads');
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
         setAds(docSnap.data() as AdsConfig);
       }
-    };
-    fetchAds();
+    });
+    return () => unsubscribe();
   }, []);
 
   const handleSave = async (key: keyof AdsConfig) => {

@@ -7,56 +7,55 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == 'wassali@Gmail.com' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
     // --- مجموعة المستخدمين ---
     match /users/{userId} {
-      // السماح للقراءة للمسجلين (ليتمكن الموصل من معرفة صاحب الطرد)
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() || isAdmin();
       
-      // السماح بإنشاء الحساب والتعديل لصاحب الحساب فقط
-      allow create: if isOwner(userId) && 
-        request.resource.data.role in ['client', 'driver'];
+      allow create: if (isOwner(userId) && request.resource.data.role in ['client', 'driver']) || isAdmin();
         
-      allow update: if isOwner(userId) && 
-        request.resource.data.role == resource.data.role; // منع تغيير الرتبة
+      allow update: if (isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin();
+
+      allow delete: if isAdmin();
     }
 
     // --- مجموعة الطرود ---
     match /parcels/{parcelId} {
-      // المالك يقرأ ويعدل طروده، والموصل يقرأ الكل للبحث عن عمل
-      allow read: if isAuthenticated() && (
+      allow read: if isAdmin() || (isAuthenticated() && (
         resource.data.ownerId == request.auth.uid || 
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'driver'
-      );
+      ));
 
-      // إنشاء طرد جديد
-      allow create: if isAuthenticated() && 
-        request.resource.data.ownerId == request.auth.uid;
+      allow create: if isAdmin() || (isAuthenticated() && 
+        request.resource.data.ownerId == request.auth.uid);
 
-      // التعديل (للمالك للإلغاء، وللموصل للقبول والتوصيل)
-      allow update: if isAuthenticated() && (
-        // المالك يعدل طرده إذا لم يقبله أحد بعد
+      allow update: if isAdmin() || (isAuthenticated() && (
         (resource.data.ownerId == request.auth.uid && (!('deliveryUID' in resource.data) || resource.data.deliveryUID == null)) ||
         
-        // الموصل يقبل الطرد أو يغير حالته
         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'driver' && (
-          // حالة القبول
           (resource.data.status == 'pending' && request.resource.data.status == 'accepted' && request.resource.data.deliveryUID == request.auth.uid) ||
-          // حالة التوصيل
           (resource.data.deliveryUID == request.auth.uid && request.resource.data.status == 'delivered')
         ))
-      );
+      ));
 
-      allow delete: if false; // منع الحذف نهائياً
+      allow delete: if isAdmin();
     }
 
     // --- مجموعة الإعدادات (الإعلانات) ---
     match /config/ads {
-      allow read: if true; // الإعلانات عامة للجميع
-      allow write: if isAuthenticated(); // تقييد الكتابة للمسجلين (كحد أدنى للأمان في هذا النموذج)
+      allow read: if true;
+      allow write: if isAdmin();
     }
   }
 }
